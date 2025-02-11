@@ -71,7 +71,7 @@ dragBox.on('boxend', function () {
 
     const numSelected = selectedFeatures.getFeatures().getLength();
     if (numSelected > 0) {
-        alert('${numSelected} feature(s) selected.');                               //swap out alert for something else that doesn't require confirmation
+        alert(numSelected + ' feature(s) selected.');                               //swap out alert for something else that doesn't require confirmation
         deleteButton.disabled = false;
     } else {
         alert("No features selected.");                                             //swap out alert for something else that doesn't require confirmation
