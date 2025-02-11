@@ -5,15 +5,9 @@
     <title> Draw Test </title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="node_modules/ol/ol.css" />
-    <style>
-        .map{
-            width: 100%;
-            height: 500px;
-        }
-    </style>
   </head>
   <body>
-    <div id="map" class="map"></div>
+      <div id="map" class="map"></div>
       <div class="row bottom-controls">
           <div class="col-auto">
               <span class="input-group">
@@ -25,9 +19,11 @@
                       <option value="Circle">Circle</option>
                   </select>
                   <input class="form-control" type="button" value="Undo" id="undo" />
+                  <button id="select-mode">Enable Selection Mode</button>
+                  <button id="delete-selected" disabled>Delete Selected</button>
               </span>
           </div>
       </div>
-    <script type="module" src="./main.js"></script>
+      <script type="module" src="./main.js"></script>
   </body>
 </html>

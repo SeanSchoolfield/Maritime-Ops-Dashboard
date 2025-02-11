@@ -8,14 +8,16 @@ html, body {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 100%;
+  width: 80%;
+  height: 80%;
 }
 .bottom-controls {
     position: absolute;
-    top: 440px; /* Adjust for spacing */
-    left: 15%;
+    top: 1%; /* Adjust for spacing */
+    left: 30%;
     transform: translateX(-50%);
     background: rgba(255, 255, 255, 0.8); /* Semi-transparent background */
-    padding: 10px;
-    border-radius: 8px;
+    padding: 6px;
+    border-radius: 4px;
 }
+
