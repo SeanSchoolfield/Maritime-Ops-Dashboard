@@ -1,65 +1,37 @@
-# About
-Northrop Grumman - Capstone 2025 - Maritime Operations Monitoring Dashboard
+# Kafka Development
 
-<br />
+We will run Kafka in KRaft mode. I think it works better with scalability, and reduces heirarchical dependency that Zookeeper typically deploys.
 
-# Configuring Environment
-## 1. Activate Python Virtual Environment
-### Setup
-`python3 -m venv {name_of_virtual_environment}`
-### Activate
-`source {name_of_virtual_environment}/bin/activate`
+## Setting up Kafka
 
-<br />
+### 1. Download Kafka
+Download the Kafka package [here](https://www.apache.org/dyn/closer.cgi?path=/kafka/3.9.0/kafka_2.13-3.9.0.tgz). Unpack it, and navigate into the directory.
 
-## 2. Install fastAPI & uvicorn
-`pip install fastapi`
-`pip install uvicorn`
+### 2. Starting Environment
+Generate a cluster UUID
+```bash
+$ KAFKA_CLUSTER_ID="$(bin/kafka-storage.sh random-uuid)"
+```
+Format the log directory
+```bash
+$ bin/kafka-storage.sh format --standalone -t $KAFKA_CLUSTER_ID -c config/kraft/reconfig-server.properties
+```
+Start the Kafka Server
+```bash
+$ bin/kafka-server-start.sh config/kraft/reconfig-server.properties
+```
+This will serve as your broker/server, so leave this console open.
 
-<br />
+## Creating a Topic
+These commands will be run in a new console window.
 
-## 3. Install PyGreSQL
-`pip install PyGreSQL`
+### Initialize new topic
+```bash
+$ bin/kafka-topics.sh --create --topic [topic-name] --bootstrap-server localhost:9092
+```
 
-<br />
-
-## 4. Running FastAPI (cd into backend directory)
-`uvicorn main:app --reload`
-
-### Backend Info
-- http://127.0.0.1:8000/docs is the local server interactive API documentation source
-- http://127.0.0.1:8000/redoc is an alternative of the above
-- http://127.0.0.1:8000/ is the listening server
-
-<br />
-
-## 5. Installing React & Dependencies
-### Node Package Manager (npm) Installation Instructions
-- [Windows Link](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
-- [MacOS Link](https://formulae.brew.sh/formula/node)
-- [Linux Link](http://www.blankwebsite.com)
-
-### Initialize & Install Dependencies
-`npm init -y`
-
-`npm install react react-dom`
-
-`npm install cesium resium`
-
-`npm install --save-dev vite @vitejs/plugin-react vite-plugin-cesium`
-
-`npm install react-toastify`
-
-### Run Dev Server
-`npm run dev`
-
-<br />
-
-# Release Notes
-## v1.0
-### Features
-- Example
-### Bug Fixes
-- Example
-### Other
-- Example
+### Listing full topic details
+Enter the following to list all topics and corresponding metadata on the connected server.
+```bash
+$ bin/kafka-topics.sh --describe --topic quickstart-events --bootstrap-server localhost:9092
+```
