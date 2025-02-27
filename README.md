@@ -4,10 +4,10 @@ We will run Kafka in KRaft mode. I think it works better with scalability, and r
 
 ## Setting up Kafka
 
-### 1. Download Kafka
+### Download Kafka
 Download the Kafka package [here](https://www.apache.org/dyn/closer.cgi?path=/kafka/3.9.0/kafka_2.13-3.9.0.tgz). Unpack it, and navigate into the directory.
 
-### 2. Starting Environment
+### Starting Environment
 Generate a cluster UUID
 ```bash
 $ KAFKA_CLUSTER_ID="$(bin/kafka-storage.sh random-uuid)"
