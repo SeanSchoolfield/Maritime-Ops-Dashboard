@@ -9,7 +9,7 @@ Below is a list of methods that the Object offers:
 ### DBOperator(table, host, port, user, passwd, schema, db)
 Requires a table to be specified in order to define an instance. Assumes a public instance, connected to database "demo" hosted on localhost:5432 with no user logging in
 
-### add(entity: tuple)
+### add(entity: dict)
 Takes a dictionary of values to add to database
 
 ### modify(entity: tuple, data: dict)
