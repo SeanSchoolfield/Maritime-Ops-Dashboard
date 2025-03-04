@@ -130,15 +130,15 @@ body,
 
 .ui-controls button {
   padding: 10px;
-  background: #007bff;
-  color: white;
+  background: rgba(255, 255, 255, 0.9);
+  color: black;
   border: none;
   border-radius: 2px;
   cursor: pointer;
 }
 
 .ui-controls button:hover {
-  background: #0056b3;
+  background: grey;
 }
 
 .overlay-panel,
@@ -157,7 +157,9 @@ body,
   z-index: 1000;
 }
 
-.tools-panel {
+.tools-panel,
+.filter-panel,
+.overlay-panel {
   width: 100px;
 }
 
