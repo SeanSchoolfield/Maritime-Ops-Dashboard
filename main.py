@@ -96,7 +96,7 @@ async def get_filtered_vessels(
     print("### Fast Server: Assembling Payload...")
     try:
         # Return all vessels if no filters are provided
-        filtered_vessels = db.fetch_filtered_vessels(filters) if filters else db.get_table()
+        filtered_vessels = db.query(filters) if filters else db.get_table()
 
         if not filtered_vessels:
             return []  # Return an empty list  

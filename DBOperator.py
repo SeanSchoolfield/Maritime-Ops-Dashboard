@@ -1,5 +1,6 @@
 from pprint import pprint
 from psycopg2 import *
+from psycopg2.errors import *
 
 class DBOperator():
     """
@@ -14,15 +15,7 @@ class DBOperator():
     otherwise
     """
     # TODO:
-    # - push multiple entries to DB
-    # - export table(?)
-    #     - To CSV/SQL
-    # - export database(?)
-    #     - To CSV/SQL
-    # - import to DB(?)
-    #     - From CSV/SQL?
-    # - remove fetching table attributes(?)
-    # - remove fetching tables in DB(?)
+    # - push multiple entries to DB (?)
     # - Parsing (Geo)JSON to enter as SQL commands
     #     - Package as JSON
 
@@ -54,7 +47,7 @@ class DBOperator():
             - ST_ExteriorRing()
             - ST_Perimeter()
     """
-    def __init__(self, table: str, host='localhost', port='5432', user='',
+    def __init__(self, table: str, host='localhost', port='5432', user='postgres',
                  passwd='', schema='public', db='capstone') -> None:
         self.table = table
         self.__host = host
@@ -63,20 +56,21 @@ class DBOperator():
         self.__passwd = passwd
         self.__db = connect(
             dbname=db,
-            # user="postgres", #!! Replace this with correct username
-            # password="1234", #!! Replace with PostgreSQL password
-            # host=self.__host,
-            # port=self.__port
+            # user=user,
+            # password=passwd,
+            # host=host,
+            # port=port
         )
-
+        print("### DBOperator: Connected to DB")
         self.__cursor = self.__db.cursor()
+
     ### Mutators ###
-    def fetch_filter_options(self):
+    def fetch_filter_options(self) -> dict:
         """
         Fetches distinct filter options for vessel types, origins, and statuses.
         """
         query = f"""
-            SELECT DISTINCT type, country_of_origin AS origin, status
+            SELECT DISTINCT type, flag, current_status AS origin
             FROM {self.table};
         """
         self.__cursor.execute(query)
@@ -93,47 +87,6 @@ class DBOperator():
             "statuses": statuses
         }
 
-    def fetch_filtered_vessels(self, filters: dict) -> list:
-        """
-        Fetches vessels based on filter options.
-        """
-        conditions = []
-        values = []
-
-        if "type" in filters:
-            conditions.append("type = %s")
-            values.append(filters['type'])
-        if "origin" in filters:
-            conditions.append("country_of_origin = %s")
-            values.append(filters['origin'])
-        if "status" in filters:
-            conditions.append("status = %s")
-            values.append(filters['status'])
-
-        if not conditions:
-            return []
-
-        query = f"""
-            SELECT id, name, type, country_of_origin, status, latitude, longitude
-            FROM {self.table}
-            WHERE {' AND '.join(conditions)}
-        """
-
-        self.__cursor.execute(query, tuple(values))
-        vessels = self.__cursor.fetchall()
-
-        return [
-            {
-                "id": v[0],
-                "name": v[1],
-                "type": v[2],
-                "country_of_origin": v[3],
-                "status": v[4],
-                "latitude": v[5],
-                "longitude": v[6]
-            }
-            for v in vessels
-        ]
     def add(self, entity: dict) -> None:
         """
         Add entry
@@ -200,19 +153,23 @@ class DBOperator():
         ### DEBUG: Verifying finalized cmd string
         # input(cmd)
 
-        self.__cursor.execute(cmd,(values))
-        print("### DBOperator: Entry added to commands queue")
+        try:
+            self.__cursor.execute(cmd,(values))
+            print("### DBOperator: Entry added to commands queue")
+        except UniqueViolation as e:
+            print(f"### DBOperator ERROR: Unable to add entity: {e}")
+
 
     def modify(self, entity: tuple, data: dict) -> None:
         """
         Modifys a singular exisitng entity
         """
-        pprint("Entity targetted:")
-        pprint(entity)
-        print("")
+        # pprint("Entity targetted:")
+        # pprint(entity)
+        # print("")
 
-        pprint("Attributes to update:")
-        pprint(data)
+        # pprint("Attributes to update:")
+        # pprint(data)
 
         # Disgusting
         cmd = f"UPDATE {self.table} SET "
@@ -220,8 +177,8 @@ class DBOperator():
             cmd += f"{key} = {val}" if type(val) != str else f"{key} = '{val}'"
             if i < (len(data.items()) - 1):
                 cmd += ","
-        print(cmd)
-        print(cmd + f" WHERE {entity[0]} = %s", (entity[1],))
+        # print(cmd)
+        # print(cmd + f" WHERE {entity[0]} = %s", (entity[1],))
 
         self.__cursor.execute(cmd + f" WHERE {entity[0]} = %s", (entity[1],))
 
@@ -229,11 +186,10 @@ class DBOperator():
         """
         deletes entry that has matching attribute
         ONLY deletes from connected table, tables inheriting from connected are NOT processed
-            - I'm highly tempted to have it wipe inherited entries as well, but that defeats the purpose of this class
+            - I'm highly tempted to have it wipe inherited entries as well, but that defeats the purpose of this object
         """
-        # TODO: Might need to check if attr value type is string, so it can be wrapped in single quotes
-        pprint("ID to delete:")
-        pprint(entity)
+        # pprint("ID to delete:")
+        # pprint(entity)
         self.__cursor.execute(f"DELETE FROM ONLY {self.table} WHERE {entity[0]} = %s", (entity[1],))
 
     def clear(self) -> tuple:
@@ -275,37 +231,9 @@ class DBOperator():
         """
         self.__cursor.close()
         self.__db.close()
-        pprint("### DBOperator: Connection closed.")
+        print("### DBOperator: Connection closed.")
         return ("message", "DB instance closed.")
 
-
-    def import_db(self) -> None:
-        """
-        Import db
-        """
-        # TODO
-        pass
-
-    def importCSV(self) -> None:
-        """
-        Imports data from CSV file. Assume that the headers match the attributes 1-1
-        """
-        # TODO
-        pass
-
-    def export_db(self) -> None:
-        """
-        Export db
-        """
-        # TODO
-        pass
-
-    def exportCSV(self) -> None:
-        """
-        Exports data from table to CSV file.
-        """
-        # TODO
-        pass
 
     ### Accessors ###
     def get_attributes(self) -> dict:
@@ -341,17 +269,54 @@ class DBOperator():
         return result
 
     # pull data from DB
-    def query(self, entity: tuple) -> dict:
+    def query(self, entity: dict) -> list:
         """
         Querys all of an attr (possibly add constraints and user defined limits?)
         """
-        # Might be good to conform this to geospatial functions
-        # ... or maybe add additional methods to do so
-        self.__cursor.execute(f"SELECT * FROM {self.table} WHERE {entity[0]} = %s", (entity[1],))
-        # NOTE: I wonder if it would be better for asynchronous calls to use the 
-        # fetchone() command, and just have FAST script call DBOperator.query() n times
-        query = self.__cursor.fetchone()
-        return {query}
+
+        conditions = []
+        values = []
+
+        for attr,value in entity.items():
+            conditions.append(f"{attr} = %s")
+            values.append(value)
+
+        if not conditions:
+            return []
+
+        query = f"""
+            SELECT *, ST_AsGeoJson(geom)
+            FROM {self.table}
+            WHERE {' AND '.join(conditions)}
+        """
+
+        self.__cursor.execute(query, tuple(values))
+        vessels = self.__cursor.fetchall()
+
+        return [
+            {
+                "mmsi": v[0],
+                "vessel_name": v[1],
+                "callsign": v[2],
+                "timestamp": v[3],
+                "heading": v[4],
+                "speed": v[5],
+                "current_status": v[6],
+                "src": v[7],
+                "type": v[8],
+                "flag": v[9],
+                "length": v[10],
+                "width": v[11],
+                "draft": v[12],
+                "cargo_weight": v[13],
+                "lat": v[14],
+                "lon": v[15],
+                "dist_from_port": v[16],
+                "dist_from_shore": v[17],
+                "geom": v[-1]
+            }
+            for v in vessels
+        ]
 
     def get_table(self) -> list:
         """
@@ -382,12 +347,6 @@ class DBOperator():
         pass
 
 if __name__ == "__main__":
-    # db = DBOperator(db=input("Enter db: "),table=input("Enter table: "))
-    vessels = DBOperator(db='capstone', table='vessels')
-
-    # pprint()
-    # db.get_tables()
-    # pprint()
     entity = {
         'callsign': 'WDN2333',
         'cargo_weight': 65.0,
@@ -410,33 +369,39 @@ if __name__ == "__main__":
         'width': 23.0
     }
 
-    # vessels.add(entity)
-    # vessels.commit()
-    # pprint("New value:")
-    pprint(vessels.query(("mmsi",368261120))) # Table should have new entity
-    input()
-    # pprint(vessels.delete()) # Entity should now be gone
-    vessels.close()
+    operator = DBOperator(table='vessels')
+    # input()
 
-    # pprint("Modifying existing value...")
-    # db.modify(('id', 2), {'name':'apple'})
-    # db.commit()
-    # pprint("Modified value:")
-    # pprint(db.query(("id",3))) # Entity should now be modified
+    ### Get filterable items
+    # pprint(operator.fetch_filter_options())
+    # input()
 
-    # db.delete(("id",2))
-    # db.commit()
-    # pprint("New table:")
-    # pprint(db.get_table()) # Entity should now be gone
+    ### Filter
+    # filters = {
+    #     "type": "TUG",
+    #     "orign": "USA"
+    # }
+    # operator.fetch_filtered_vessels(filters)
+    # input()
 
-    # pprint("Rolling back clear table...")
-    # db.clear()
-    # db.rollback()
-    # pprint(db.get_table()) # should still have full table
+    ### Add
+    # operator.add(entity)
+    # operator.commit()
 
-    # pprint("Clearing table...")
-    # db.clear()
-    # db.commit()
-    # pprint(db.get_table()) # table should have no entries
+    ### Query
+    pprint(operator.query({"mmsi":368261120})) # Table should have new entity
+    # input()
+    
+    ### Modify
+    # operator.modify(("mmsi",368261120),{'speed':0.0})
+    # operator.commit()
+    # print("Changed entry:")
+    # pprint(operator.query(("mmsi",368261120)))
+    # input()
 
-    # db.close()
+    ### Delete
+    # operator.delete(("mmsi",368261120))
+    # operator.commit()
+    # pprint(operator.query(("mmsi",368261120)))
+
+    operator.close()
