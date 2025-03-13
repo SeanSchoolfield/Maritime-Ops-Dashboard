@@ -27,12 +27,33 @@ class DBOperator():
     #     - Package as JSON
 
     # - PostGIS related stuff
-    #     - SRID = 4326 !!!
     #     - Take advantage of geometric functions in PostGIS (See postGIS_notes.txt)
     #         - There's also the geography/projection stuff, definitely gonna use those
     #     - Retrieved data should already be primed for geospatial/projection
     #         - Look @ the projection/geography modules
     #         - refer to geospatial conversion/modify functions!
+    """
+    // POSTGIS
+        - Storing as Geography, likely will have to conver to geography
+        - SRID = 4326 !!!
+        - Zone stuff
+            - ST_Equals() (to check zone existence)
+            - ST_Within() (Possibly good for ships encroaching on a zone for warning, or ships near others)
+            - ST_Touches() (For bordering ships/zones)
+            - ST_DWithin() (FOR SHIPS WITHIN ANY ZONE)!!
+            - ST_Contians() (FOR SHIPS WITHIN ZONES)
+            - ST_Intersect() (for a custom zone on EEZ/NOAA?)
+            - ST_Overlaps(for a custom zone intersecting with EEZ/NOAA, to pull data wrt EEZ/NOAA)
+        - Vessel prediction
+            - ST_Crosses() (If a projected route crosses another, or if a ship enters a zone)
+            - ST_Distance() path prediction
+        - Things I think might be useful
+            - ST_Disjoint() for zones
+            - ST_Area()
+            - ST_NRing() == 0
+            - ST_ExteriorRing()
+            - ST_Perimeter()
+    """
     def __init__(self, table: str, host='localhost', port='5432', user='',
                  passwd='', schema='public', db='capstone') -> None:
         self.table = table

@@ -61,14 +61,13 @@ ST_DWithin(geomA,geomB,n): whether geomB is within n distance of geomA
 
 # PostgreSQL plugins
 - C/C++: https://www.postgresql.org/docs/current/libpq.html
-- Python: https://www.pygresql.org/
 
 # Quirks
 - Windows conventionally saves it in "C:\Program Files\PostgreSQL\17"
+    - need to move it out to use pygresql
 
 ### Installing PyGreSQL
 sudo dnf install postgresql-devel
-pip install PyGreSQL
 
 ### Notes
 - MUST EXECUTE `create extension postgis;` BEFORE IMPORTING ANY DATA
