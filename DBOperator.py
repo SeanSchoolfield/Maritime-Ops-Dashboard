@@ -65,31 +65,9 @@ class DBOperator():
         self.__cursor = self.__db.cursor()
 
     ### Mutators ###
-    def fetch_filter_options(self) -> dict:
-        """
-        Fetches distinct filter options for vessel types, origins, and statuses.
-        """
-        query = f"""
-            SELECT DISTINCT type, flag, current_status AS origin
-            FROM {self.table};
-        """
-        self.__cursor.execute(query)
-        vessels = self.__cursor.fetchall()
-
-        # Extract unique filter options
-        types = list(set(v[0] for v in vessels if v[0]))
-        origins = list(set(v[1] for v in vessels if v[1]))
-        statuses = list(set(v[2] for v in vessels if v[2]))
-
-        return {
-            "types": types,
-            "origins": origins,
-            "statuses": statuses
-        }
-
     def add(self, entity: dict) -> None:
         """
-        Add entry
+        Adds entry to connected table
         Expects a dict = {key: value} to enter as attribute and value
         """
         # TODO: Handle multiple entities for bulk additions
@@ -100,11 +78,7 @@ class DBOperator():
         #   - Prolly have entity become entities = [dict]
         #   - Pretty sure this will replicate for modify() and delete() too
         
-        # Wonder if this can be restricted to expect all values to be added to DB
         #   i.e. JSON is provided, with all values, and data that is unkown/un-needed is given default or NULL value
-
-        # pprint(entity)
-        # input()
 
         geom = None
         # If Geometry element exists, pop it to be added at the end
@@ -116,11 +90,6 @@ class DBOperator():
         attrs = ','.join(entity.keys())
         if geom != None: # If geometry was popped, append geom key to attrs
             attrs += ',geom'
-
-        # ### DEBUG: Verifying Attributes
-        # print(f"attributes ({len(attrs.split(','))}):")
-        # pprint(attrs)
-        # input()
 
         # Define values array for pruning LATER...
         values = [value for value in entity.values()]
@@ -137,12 +106,6 @@ class DBOperator():
         # NOW we convert values into tuples
         values = tuple(values)
 
-        # ### DEBUG: Checking that values were properly assigned
-        # print()
-        # pprint(f"values({len(values)}):")
-        # pprint(values)
-        # input()
-
         # If geom was popped, finish off cmd string formatting append 'ST_GeomFromText()'
         #   Otherwise, just add a ')'
         if geom != None:
@@ -150,35 +113,22 @@ class DBOperator():
         else:
             cmd = cmd[:-1] + ')'
 
-        ### DEBUG: Verifying finalized cmd string
-        # input(cmd)
-
         try:
             self.__cursor.execute(cmd,(values))
             print("### DBOperator: Entry added to commands queue")
-        except UniqueViolation as e:
+        except Exception as e:
             print(f"### DBOperator ERROR: Unable to add entity: {e}")
-
 
     def modify(self, entity: tuple, data: dict) -> None:
         """
         Modifys a singular exisitng entity
         """
-        # pprint("Entity targetted:")
-        # pprint(entity)
-        # print("")
-
-        # pprint("Attributes to update:")
-        # pprint(data)
-
         # Disgusting
         cmd = f"UPDATE {self.table} SET "
         for i, (key, val) in enumerate(data.items()):
             cmd += f"{key} = {val}" if type(val) != str else f"{key} = '{val}'"
             if i < (len(data.items()) - 1):
                 cmd += ","
-        # print(cmd)
-        # print(cmd + f" WHERE {entity[0]} = %s", (entity[1],))
 
         self.__cursor.execute(cmd + f" WHERE {entity[0]} = %s", (entity[1],))
 
@@ -188,8 +138,6 @@ class DBOperator():
         ONLY deletes from connected table, tables inheriting from connected are NOT processed
             - I'm highly tempted to have it wipe inherited entries as well, but that defeats the purpose of this object
         """
-        # pprint("ID to delete:")
-        # pprint(entity)
         self.__cursor.execute(f"DELETE FROM ONLY {self.table} WHERE {entity[0]} = %s", (entity[1],))
 
     def clear(self) -> tuple:
@@ -248,7 +196,6 @@ class DBOperator():
         """
         Fetching tables in DB
         """
-        pprint("getting tables in db:")
         self.__cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
         attr = self.__cursor.fetchall()
         for table in attr:
@@ -268,12 +215,34 @@ class DBOperator():
 
         return result
 
+    def fetch_filter_options(self) -> dict:
+        """
+        Fetches distinct filter options for vessel types, origins, and statuses.
+        """
+        query = f"""
+            SELECT DISTINCT type, flag, current_status AS origin
+            FROM {self.table};
+        """
+        self.__cursor.execute(query)
+        vessels = self.__cursor.fetchall()
+
+        # Extract unique filter options
+        types = list(set(v[0] for v in vessels if v[0]))
+        origins = list(set(v[1] for v in vessels if v[1]))
+        statuses = list(set(v[2] for v in vessels if v[2]))
+
+        return {
+            "types": types,
+            "origins": origins,
+            "statuses": statuses
+        }
+
     # pull data from DB
     def query(self, entity: dict) -> list:
         """
-        Querys all of an attr (possibly add constraints and user defined limits?)
+        Querys entities based on a dictionary of provided filters
+        returns list of dictionary types
         """
-
         conditions = []
         values = []
 
@@ -320,10 +289,35 @@ class DBOperator():
 
     def get_table(self) -> list:
         """
-        querys the whole table
+        Returns all entries in a table as a list of dictionary datatypes
         """
-        self.__cursor.execute(f"SELECT * FROM {self.table}")
-        return self.__cursor.fetchall()
+        self.__cursor.execute(f"SELECT *,ST_AsGeoJson(geom) FROM {self.table}")
+        vessels = self.__cursor.fetchall()
+
+        return [
+            {
+                "mmsi": v[0],
+                "vessel_name": v[1],
+                "callsign": v[2],
+                "timestamp": v[3],
+                "heading": v[4],
+                "speed": v[5],
+                "current_status": v[6],
+                "src": v[7],
+                "type": v[8],
+                "flag": v[9],
+                "length": v[10],
+                "width": v[11],
+                "draft": v[12],
+                "cargo_weight": v[13],
+                "lat": v[14],
+                "lon": v[15],
+                "dist_from_port": v[16],
+                "dist_from_shore": v[17],
+                "geom": v[-1]
+            }
+            for v in vessels
+        ]
 
     def get_count(self) -> int:
         """

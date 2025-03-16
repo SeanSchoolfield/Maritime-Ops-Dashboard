@@ -178,7 +178,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
+pytype
 # pytype static type analyzer
 .pytype/
 
@@ -201,3 +201,6 @@ cython_debug/
 # Python Virtual Environment (add the name of your virtual env if none of the below)
 venv/
 fastapi-env/
+
+# Ignoring Kafka version 2 modules
+kafka_2*/
