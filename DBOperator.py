@@ -47,22 +47,25 @@ class DBOperator():
             - ST_ExteriorRing()
             - ST_Perimeter()
     """
-    def __init__(self, table: str, host='localhost', port='5432', user='postgres',
+    def __init__(self, table: str, host='', port='', user='',
                  passwd='', schema='public', db='capstone') -> None:
         self.table = table
         self.__host = host
         self.__port = port
         self.__user = user
         self.__passwd = passwd
+
         self.__db = connect(
             dbname=db,
-            # user=user,
-            # password=passwd,
-            # host=host,
-            # port=port
+            user=user,
+            password=passwd,
+            host=host,
+            port=port
         )
-        print("### DBOperator: Connected to DB")
         self.__cursor = self.__db.cursor()
+        if table not in self.__get_tables():
+            raise RuntimeError(f"Table does not exist")
+        print("### DBOperator: Connected to DB")
 
     ### Mutators ###
     def add(self, entity: dict) -> None:
@@ -182,7 +185,6 @@ class DBOperator():
         print("### DBOperator: Connection closed.")
         return ("message", "DB instance closed.")
 
-
     ### Accessors ###
     def get_attributes(self) -> dict:
         """
@@ -192,14 +194,16 @@ class DBOperator():
         return {q[0]:q[1] for q in self.__cursor.fetchall()}
 
     # Fetching tables in DB --> Dev option!
-    def get_tables(self) -> None:
+    def __get_tables(self) -> list:
         """
         Fetching tables in DB
         """
         self.__cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
-        attr = self.__cursor.fetchall()
-        for table in attr:
-            pprint(table)
+        tables = [i[0] for i in self.__cursor.fetchall()]
+        # pprint(type(tables))
+        # for table in tables:
+        #     pprint(table)
+        return tables
 
     def get_privileges(self) -> dict:
         """
