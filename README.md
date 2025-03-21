@@ -1,16 +1,23 @@
 # Backend Testing
-## websocket.test.py
+## test.websocket.py
 Tests main.py
 
-## DBOperator.test.py
-Tests DBOperator behavior
+## test_DBOperator.py
+Tests DBOperator behavior for:
+- init()
+- hidden methods
+- query()
+- delete() <- In progress
+- add()
+- modify() 
 
-## Consumer.test.py
+
+## test.Consumer.py
 Tests Kafka Consumer script behavior
 
-## Producer.test.py
+## test.Producer.py
 Tests Kafka Producer script behavior
 
-## api.test.py
-Tests behavior of API and it communicating with Kafka Producer/Consumer
+## test.api.py
+Tests behavior of API and communicating with Kafka Producer/Consumer
 
