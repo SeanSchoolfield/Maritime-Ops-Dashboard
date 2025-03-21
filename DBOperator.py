@@ -67,6 +67,7 @@ class DBOperator():
             if table not in self.__get_tables():
                 raise RuntimeError(f"Table does not exist")
             print("### DBOperator: Connected to DB")
+            self.permissions = self.__get_privileges()
         except OperationalError as e:
             print(f"### DBOperator: Error connecting to database:\n{e}")
             raise OperationalError
@@ -76,6 +77,10 @@ class DBOperator():
         """
         Adds entry to connected table
         Expects a dict = {key: value} to enter as attribute and value
+        Expects keys to match attrs. If attr is missing from key, ''/0/0.0 is provided.
+        Unnacceptable Missing Attrs:
+            ID reference values (vessels.mmsi, user.id, user.hash, zone.id, event.id, report.id)
+            Geometry
         """
         # TODO: Handle multiple entities for bulk additions
         # I might want to track relations, and organize entity values based off of it.
@@ -123,8 +128,9 @@ class DBOperator():
         try:
             self.__cursor.execute(cmd,(values))
             print("### DBOperator: Entry added to commands queue")
-        except Exception as e:
+        except UniqueViolation as e:
             print(f"### DBOperator ERROR: Unable to add entity: {e}")
+            raise UniqueViolation
 
     def modify(self, entity: tuple, data: dict) -> None:
         """
@@ -209,7 +215,7 @@ class DBOperator():
         #     pprint(table)
         return tables
 
-    def get_privileges(self) -> dict:
+    def __get_privileges(self) -> dict:
         """
         Lists the privileges assigned to user per a given operation
         """
@@ -301,7 +307,7 @@ class DBOperator():
                 ]
         except UndefinedColumn as e:
             print(f"### DBOperator: Error occured:\n{e}")
-            # raise UndefinedColumn
+            raise UndefinedColumn
 
     def get_table(self) -> list:
         """
@@ -380,6 +386,7 @@ if __name__ == "__main__":
     }
 
     operator = DBOperator(table='vessels')
+    print(operator.permissions)
     # input()
 
     ### Get filterable items
@@ -395,11 +402,11 @@ if __name__ == "__main__":
     # input()
 
     ### Add
-    # operator.add(entity)
-    # operator.commit()
+    operator.add(entity)
+    operator.commit()
 
     ### Query
-    pprint(operator.query({"mmsi":368261120})) # Table should have new entity
+    # pprint(operator.query([{"mmsi":368261120}])) # Table should have new entity
     # input()
     
     ### Modify
@@ -410,8 +417,29 @@ if __name__ == "__main__":
     # input()
 
     ### Delete
-    # operator.delete(("mmsi",368261120))
+    operator.delete(("mmsi",368261120))
     # operator.commit()
     # pprint(operator.query(("mmsi",368261120)))
 
     operator.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

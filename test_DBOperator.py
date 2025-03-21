@@ -70,6 +70,14 @@ class TestHiddenMethods():
         with pytest.raises(AttributeError):
             self.db.get_tables()
 
+    def test_uncallable__get_tables(self):
+        with pytest.raises(AttributeError):
+            self.db.__get_privileges()
+
+    def test_uncallable_get_tables_agian(self):
+        with pytest.raises(AttributeError):
+            self.db.get_privileges()
+
 @pytest.mark.queries
 class TestQueries():
     def setup_method(self):
@@ -87,6 +95,7 @@ class TestQueries():
          },
     ]
         self.wrong_attr = {'status': 'anchored'} # attr doesn't exist
+        self.wrong_attr_type = {'status': 15} # attr doesn't exist
         self.result = None
         self.existing_entity = {
             'callsign': 'WDN2333',
@@ -161,6 +170,219 @@ class TestQueries():
     def test_wrong_attr(self):
         with pytest.raises(UndefinedColumn): # Might be worth catching and throwing agian?
             self.result = self.db.query([self.wrong_attr])
+
+    def test_wrong_attr_type(self):
+        with pytest.raises(UndefinedColumn): # Might be worth catching and throwing agian?
+            self.result = self.db.query([self.wrong_attr_type])
+
+@pytest.mark.delete
+class TestDeletions():
+    def setup_method(self):
+        self.db = DBOperator(table="vessels")
+        self.result = None
+        self.empty = {}
+        self.entity = { 'mmsi': 368261120 }
+        self.invalid_entity = { 'mmsi': 1234 }
+        self.entity_invalid_type = { 'mmsi': '368261120' }
+        self.entity_invalid_attr = { 'id': '368261120' }
+
+    def teardown_method(self):
+        # entity = {
+        #     'callsign': 'WDN2333',
+        #     'cargo_weight': 65.0,
+        #     'current_status': '0',
+        #     'dist_from_port': 0.0,
+        #     'dist_from_shore': 0.0,
+        #     'draft': 2.8,
+        #     'flag': 'USA',
+        #     'geom': 'Point(-91.0 30.15)',
+        #     'heading': 356.3,
+        #     'lat': 30.15,
+        #     'length': 137.0,
+        #     'lon': -91.0,
+        #     'mmsi': 368261120,
+        #     'speed': 7.6,
+        #     'src': 'MarineCadastre-AIS',
+        #     'timestamp': '2024-09-30T00:00:01',
+        #     'type': 'PASSENGER',
+        #     'vessel_name': 'VIKING MISSISSIPPI',
+        #     'width': 23.0
+        # }
+        # self.db.add(entity)
+        # self.db.commit()
+        # self.db.close()
+        del self.result
+        del self.empty
+        del self.entity
+        del self.invalid_entity
+        del self.entity_invalid_type
+        del self.entity_invalid_attr
+
+    def test_delete(self):
+        self.db.delete(entity)
+        # self.commit()
+        # self.result = self.query([entity])
+        # assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
+
+    def test_invalid_delete(self):
+        self.db.delete(self.invalid_entity)
+
+    def test_invalid_type(self):
+        self.db.delete(self.entity_invalid_type)
+
+    def test_invalid_attr(self):
+        self.db.delete(self.entity_invalid_attr)
+
+@pytest.mark.add
+class TestAdditions():
+    def setup_method(self):
+        self.db = DBOperator(table="vessels")
+        self.result = None
+        self.empty_entity = {}
+        self.existing_entity = {
+            'callsign': 'WDN2333',
+            'cargo_weight': 65.0,
+            'current_status': '0',
+            'dist_from_port': 0.0,
+            'dist_from_shore': 0.0,
+            'draft': 2.8,
+            'flag': 'USA',
+            'geom': 'Point(-91.0 30.15)',
+            'heading': 356.3,
+            'lat': 30.15,
+            'length': 137.0,
+            'lon': -91.0,
+            'mmsi': 368261120,
+            'speed': 7.6,
+            'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:01',
+            'type': 'PASSENGER',
+            'vessel_name': 'VIKING MISSISSIPPI',
+            'width': 23.0
+        }
+
+        self.new_entity = {
+            'mmsi': 367702270,
+            'vessel_name': 'MS. JENIFER TRETTER',
+            'callsign': 'WDI4813',
+            'timestamp': '2024-09-30T00:00:00',
+            'heading': 334.5,
+            'speed': 6.6,
+            'current_status' : '12',
+            'src': 'MarineCadastre-AIS',
+                'type'; 'TUG',
+            'type': 'USA',
+            'length': 113.0,
+            'width': 34.0,
+            'draft': 3.1,
+            'cargo_weight': 56.0,
+            'lat': 26.1,
+            'lon': -97.21,
+            'dist_from_shore': 0.0,
+            'dist_from_port': 0.0,
+            'geom': 'Point(-97.21 26.1)'
+        }
+
+        self.entity_with_invalid_types= {
+            'mmsi': '367702270',
+            'vessel_name': 'MS. JENIFER TRETTER',
+            'callsign': 'WDI4813',
+            'timestamp': '2024-09-30T00:00:00',
+            'heading': '334.5',
+            'speed': 6.6,
+            'current_status' : 12,
+            'src': 'MarineCadastre-AIS',
+            'type'; 'TUG',
+            'type': 'USA',
+            'length': 113.0,
+            'width': 34.0,
+            'draft': 3.1,
+            'cargo_weight': 56.0,
+            'lat': 26.1,
+            'lon': -97.21,
+            'dist_from_shore': 0.0,
+            'dist_from_port': 0.0,
+            'geom': 'Point(-97.21 26.1)'
+        }
+
+        self.entity_missing_geom = {
+            'mmsi': 367702270,
+            'vessel_name': 'MS. JENIFER TRETTER',
+            'callsign': 'WDI4813',
+            'timestamp': '2024-09-30T00:00:00',
+            'heading': 334.5,
+            'speed': 6.6,
+            'current_status' : 12,
+            'src': 'MarineCadastre-AIS',
+                'type'; 'TUG',
+            'type': 'USA',
+            'length': 113.0,
+            'width': 34.0,
+            'draft': 3.1,
+            'cargo_weight': 56.0,
+            'lat': 26.1,
+            'lon': -97.21,
+            'dist_from_shore': 0.0,
+            'dist_from_port': 0.0,
+        }
+
+        self.entity_missing_attrs = {
+            'mmsi': 367702270,
+            'vessel_name': 'MS. JENIFER TRETTER',
+            'callsign': 'WDI4813',
+            'timestamp': '2024-09-30T00:00:00',
+            'speed': 6.6,
+            'current_status' : 12,
+            'type': 'USA',
+            'length': 113.0,
+            'draft': 3.1,
+            'lat': 26.1,
+            'dist_from_shore': 0.0,
+            'dist_from_port': 0.0
+        }
+
+        self.entity_missing_mmsi = {
+            'vessel_name': 'MS. JENIFER TRETTER',
+            'callsign': 'WDI4813',
+            'timestamp': '2024-09-30T00:00:00',
+            'heading': 334.5,
+            'speed': 6.6,
+            'current_status': 12,
+            'src': 'MarineCadastre-AIS',
+            'type'; 'TUG',
+            'type': 'USA',
+            'length': 113.0,
+            'width': 34.0,
+            'draft': 3.1,
+            'cargo_weight': 56.0,
+            'lat': 26.1,
+            'lon': -97.21,
+            'dist_from_shore': 0.0,
+            'dist_from_port': 0.0
+        }
+
+    def teardown_method(self):
+        self.db.rollback()
+        self.db.close()
+        del self.db
+        del self.result
+        del self.empty_entity
+        del self.existing_entity
+        del self.new_entity
+        del self.entity_missing_geom
+        del self.entity_missing_attrs
+        del self.entity_missing_mmsi
+
+        def test_add(self):
+            self.db.add(self.new_entity)
+
+# TODO: How to mock my pre-existing database!
+
+@pytest.mark.modify
+class TestModification():
+    def setup_method(self):
+        self.db = DBOperator(table="vessels")
+        self.result = None
 
 if __name__ == "__main__":
     entity = {
