@@ -8,7 +8,6 @@ from pprint import pprint
 - Items to test
     - DBOperator
         - feed it all sorts of data and reqeusts to push/pull
-
 - Things to test for
     - Initializing DB connection and cursor
     - Can handle a pending request for up to a specified time
@@ -70,11 +69,11 @@ class TestHiddenMethods():
         with pytest.raises(AttributeError):
             self.db.get_tables()
 
-    def test_uncallable__get_tables(self):
+    def test_uncallable__get_privileges(self):
         with pytest.raises(AttributeError):
             self.db.__get_privileges()
 
-    def test_uncallable_get_tables_agian(self):
+    def test_uncallable_get_privileges_agian(self):
         with pytest.raises(AttributeError):
             self.db.get_privileges()
 
@@ -139,6 +138,14 @@ class TestQueries():
             assert isinstance(i, dict), "List contains dictionary items"
         assert self.result[0]['mmsi'] == self.existing_entity['mmsi'], "mmsi matches what I know exists in DB"
 
+    def test_query_empty_arr(self): # Thinking this will throw an error when empty arr is provided
+        with pytest.raises(AttributeError):
+            self.result = self.db.query([])
+
+    def test_query_empty_dict(self): # Thinking this will throw an error when empty dict in arr is provided
+        with pytest.raises(AttributeError):
+            self.result = self.db.query([{}])
+
     def test_absolute_query(self):
         self.result = self.db.query([self.existing_entity])
         assert len(self.result) == 1, "Should only query 1 entity"
@@ -182,56 +189,88 @@ class TestDeletions():
         self.result = None
         self.empty = {}
         self.entity = { 'mmsi': 368261120 }
-        self.invalid_entity = { 'mmsi': 1234 }
+        self.entity_many_attrs = {
+                'callsign': 'WDN2333',
+                'cargo_weight': 65.0,
+                'current_status': '0',
+                'dist_from_port': 0.0,
+                'dist_from_shore': 0.0,
+                'draft': 2.8,
+                'flag': 'USA',
+                'geom': 'Point(-91.0 30.15)',
+                'heading': 356.3,
+                'lat': 30.15,
+                'length': 137.0,
+                'lon': -91.0,
+                'mmsi': 368261120,
+                'speed': 7.6,
+                'src': 'MarineCadastre-AIS',
+                'timestamp': '2024-09-30T00:00:01',
+                'type': 'PASSENGER',
+                'vessel_name': 'VIKING MISSISSIPPI',
+                'width': 23.0
+            }
         self.entity_invalid_type = { 'mmsi': '368261120' }
         self.entity_invalid_attr = { 'id': '368261120' }
 
     def teardown_method(self):
-        # entity = {
-        #     'callsign': 'WDN2333',
-        #     'cargo_weight': 65.0,
-        #     'current_status': '0',
-        #     'dist_from_port': 0.0,
-        #     'dist_from_shore': 0.0,
-        #     'draft': 2.8,
-        #     'flag': 'USA',
-        #     'geom': 'Point(-91.0 30.15)',
-        #     'heading': 356.3,
-        #     'lat': 30.15,
-        #     'length': 137.0,
-        #     'lon': -91.0,
-        #     'mmsi': 368261120,
-        #     'speed': 7.6,
-        #     'src': 'MarineCadastre-AIS',
-        #     'timestamp': '2024-09-30T00:00:01',
-        #     'type': 'PASSENGER',
-        #     'vessel_name': 'VIKING MISSISSIPPI',
-        #     'width': 23.0
-        # }
-        # self.db.add(entity)
-        # self.db.commit()
-        # self.db.close()
+        if len(self.db.query([self.entity])) == 0:
+            entity = {
+                'callsign': 'WDN2333',
+                'cargo_weight': 65.0,
+                'current_status': '0',
+                'dist_from_port': 0.0,
+                'dist_from_shore': 0.0,
+                'draft': 2.8,
+                'flag': 'USA',
+                'geom': 'Point(-91.0 30.15)',
+                'heading': 356.3,
+                'lat': 30.15,
+                'length': 137.0,
+                'lon': -91.0,
+                'mmsi': 368261120,
+                'speed': 7.6,
+                'src': 'MarineCadastre-AIS',
+                'timestamp': '2024-09-30T00:00:01',
+                'type': 'PASSENGER',
+                'vessel_name': 'VIKING MISSISSIPPI',
+                'width': 23.0
+            }
+            self.db.add(entity)
+            self.db.commit()
+        self.db.close()
         del self.result
         del self.empty
         del self.entity
-        del self.invalid_entity
+        del self.entity_many_attrs
         del self.entity_invalid_type
         del self.entity_invalid_attr
 
+    def test_delete_nothing(self):
+        with pytest.raises(AttributeError):
+            self.db.delete(self.empty)
+
     def test_delete(self):
-        self.db.delete(entity)
-        # self.commit()
-        # self.result = self.query([entity])
-        # assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
+        self.db.delete(self.entity)
+        self.db.commit()
+        self.result = self.db.query([self.entity])
+        assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
 
-    def test_invalid_delete(self):
-        self.db.delete(self.invalid_entity)
+    def test_delete_many_attrs(self):
+        self.db.delete(self.entity_many_attrs)
+        self.db.commit()
+        self.result = self.db.query([self.entity_many_attrs])
+        assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
 
-    def test_invalid_type(self):
-        self.db.delete(self.entity_invalid_type)
+    # TODO: Want this to throw an error
+    # def test_invalid_type(self):
+    #     self.db.delete(self.entity_invalid_type)
+    #     self.result = self.db.query([self.entity_invalid_type])
+    #     assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
 
     def test_invalid_attr(self):
-        self.db.delete(self.entity_invalid_attr)
+        with pytest.raises(UndefinedColumn):
+            self.db.delete(self.entity_invalid_attr)
 
 @pytest.mark.add
 class TestAdditions():
@@ -270,7 +309,7 @@ class TestAdditions():
             'speed': 6.6,
             'current_status' : '12',
             'src': 'MarineCadastre-AIS',
-                'type'; 'TUG',
+                'type': 'TUG',
             'type': 'USA',
             'length': 113.0,
             'width': 34.0,
@@ -283,7 +322,7 @@ class TestAdditions():
             'geom': 'Point(-97.21 26.1)'
         }
 
-        self.entity_with_invalid_types= {
+        self.entity_with_invalid_types = {
             'mmsi': '367702270',
             'vessel_name': 'MS. JENIFER TRETTER',
             'callsign': 'WDI4813',
@@ -292,7 +331,7 @@ class TestAdditions():
             'speed': 6.6,
             'current_status' : 12,
             'src': 'MarineCadastre-AIS',
-            'type'; 'TUG',
+            'type': 'TUG',
             'type': 'USA',
             'length': 113.0,
             'width': 34.0,
@@ -314,7 +353,7 @@ class TestAdditions():
             'speed': 6.6,
             'current_status' : 12,
             'src': 'MarineCadastre-AIS',
-                'type'; 'TUG',
+            'type': 'TUG',
             'type': 'USA',
             'length': 113.0,
             'width': 34.0,
@@ -349,7 +388,7 @@ class TestAdditions():
             'speed': 6.6,
             'current_status': 12,
             'src': 'MarineCadastre-AIS',
-            'type'; 'TUG',
+            'type': 'TUG',
             'type': 'USA',
             'length': 113.0,
             'width': 34.0,

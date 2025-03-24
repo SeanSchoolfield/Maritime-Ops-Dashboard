@@ -7,18 +7,11 @@ class DBOperator():
     A basic Class that will directly interface with a PostGIS database on
     behalf of the Maritime Dashboard
 
-    psycopg2 is DB-API 2.0 Compliant with different geospatial DBs
-    (https://peps.python.org/pep-0249/)
-    - Enables things like threadsafety too???
-
     DBOperator will implicitly connect to 'capstone' database unless specified
     otherwise
     """
     # TODO:
     # - push multiple entries to DB (?)
-    # - Parsing (Geo)JSON to enter as SQL commands
-    #     - Package as JSON
-
     # - PostGIS related stuff
     #     - Take advantage of geometric functions in PostGIS (See postGIS_notes.txt)
     #         - There's also the geography/projection stuff, definitely gonna use those
@@ -68,6 +61,7 @@ class DBOperator():
                 raise RuntimeError(f"Table does not exist")
             print("### DBOperator: Connected to DB")
             self.permissions = self.__get_privileges()
+            self.attr_types = self.get_attributes()
         except OperationalError as e:
             print(f"### DBOperator: Error connecting to database:\n{e}")
             raise OperationalError
@@ -145,13 +139,50 @@ class DBOperator():
 
         self.__cursor.execute(cmd + f" WHERE {entity[0]} = %s", (entity[1],))
 
-    def delete(self, entity: tuple) -> None:
+    def delete(self, entity: dict) -> None:
         """
-        deletes entry that has matching attribute
+        deletes entry that has matching attributes ONLY.
         ONLY deletes from connected table, tables inheriting from connected are NOT processed
             - I'm highly tempted to have it wipe inherited entries as well, but that defeats the purpose of this object
         """
-        self.__cursor.execute(f"DELETE FROM ONLY {self.table} WHERE {entity[0]} = %s", (entity[1],))
+        # NOTE: NO indication that delete is called on non-existent values.
+        # Assumes value exists, and just deletes nothing
+
+        if len(entity) == 0:
+            raise AttributeError("### DBOperator: Error. Provided entity is empty.")
+
+        print(f"### DBOperator: Deleting {entity}")
+
+        conditions = []
+        values = []
+
+        for attr,value in entity.items():
+            if attr == 'geom':
+                print(f"Geom provided: {attr}:{value}")
+                conditions.append(f"{attr} = ST_GeographyFromText(%s)")
+            else:
+                conditions.append(f"{attr} = %s")
+            values.append(value)
+
+        if not conditions:
+            return []
+
+        query = f"""
+            DELETE FROM ONLY {self.table}
+            WHERE {' AND '.join(conditions)}
+        """
+        print(f"### DBOperator: Query:\n{query}")
+        print(f"### DBOperator: Values: {tuple(values)}")
+
+        # input()
+
+        try: 
+            self.__cursor.execute(query, tuple(values))
+            print("### DBOperator: Deletion reqeust added to queue.")
+        except UndefinedColumn as e:
+            print(f"{e}\n### DBOperator: Error deleting item.")
+            self.rollback() # Uhm... Why are you necessary so other commands don't break?
+            raise UndefinedColumn
 
     def clear(self) -> tuple:
         """
@@ -247,8 +278,8 @@ class DBOperator():
 
         return {
             "types": types,
-            "origins": origins,
-            "statuses": statuses
+            "flag": origins,
+            "current_status": statuses
         }
 
     # pull data from DB
@@ -257,10 +288,17 @@ class DBOperator():
         Querys entities based on a dictionary of provided filters
         returns list of dictionary types
         """
+        # NOTE: NO indication for query on non-existent values.
+        # Assume value exists and just returns an empty array.
         cmd = []
         values = []
 
+        if len(queries) == 0:
+            raise AttributeError("### DBOperator: Cannot query an empty array...")
+
         for entity in queries:
+            if len(entity) == 0:
+                raise AttributeError("### DBOperator: Cannot query an empty dictionary...")
             conditions = []
             for attr,value in entity.items():
                 conditions.append(f"{attr} = %s")
@@ -274,9 +312,6 @@ class DBOperator():
                 FROM {self.table}
                 WHERE {' AND '.join(conditions)}
             """)
-        print(f"### DBOperator: Query:\n{' UNION '.join(cmd)}")
-        print(f"### DBOperator: Values:")
-        pprint(values)
 
         try:
             self.__cursor.execute(" UNION ".join(cmd), tuple(values))
@@ -308,6 +343,9 @@ class DBOperator():
         except UndefinedColumn as e:
             print(f"### DBOperator: Error occured:\n{e}")
             raise UndefinedColumn
+        except InFailedSqlTransaction as e:
+            print(f"{e}\n### DBOperator: Error executing query. Did you forget to rollback an invalid edit-like command?")
+            raise InFailedSqlTransaction
 
     def get_table(self) -> list:
         """
@@ -349,18 +387,65 @@ class DBOperator():
         self.__cursor.execute(f"SELECT Count(*) FROM {self.table}")
         return self.__cursor.fetchone()[0]
 
+    """
+    ### geom-ship relationships!
+    """
     # These are ideally supposed to take advantage of the PostGIS stuff
-    def get_within(self, geom):
+    def proximity(self, var, range=5000.0):
         """
-        Gets data within region
+        Gets vessels witihin a specified range of a geometry
+        ST_DWithin(geom, var, range)
+        """
+
+        query = f"""
+                SELECT mmsi,vessel_name,callsign,heading,speed,current_status,src,type,flag,lat,lon,ST_AsGeoJson(geom)
+                FROM {self.table}
+                WHERE ST_DWithin(geom, ST_GeogFromText('{var}'),{range})
+            """
+
+        """
+        select mmsi 
+        from vessels 
+        where ST_DWithin(geom, St_GeogFromText('Point(-91.02 30.13)'), 5000)
+        """
+        print(query)
+
+        # input()
+
+        self.__cursor.execute(query)
+        vessels = [i for i in self.__cursor.fetchall()]
+        return [
+            {
+                "mmsi": v[0],
+                "vessel_name": v[1],
+                "callsign": v[2],
+                "heading": v[3],
+                "speed": v[4],
+                "current_status": v[5],
+                "src": v[6],
+                "type": v[7],
+                "flag": v[8],
+                "lat": v[9],
+                "lon": v[10],
+                "geom": v[11]
+            }
+            for v in vessels
+        ]
+
+    def inside(self, var):
+        """
+        Gets vessels within a specified geometry
+        ST_Contains(var, geom)
         """
         pass
 
-    def get_surrounding(self, geom):
+
+    def borders(self, var):
         """
-        Gets data within region
+        Gets vessels that border/touches a specified geometry
         """
         pass
+    
 
 if __name__ == "__main__":
     entity = {
@@ -386,9 +471,12 @@ if __name__ == "__main__":
     }
 
     operator = DBOperator(table='vessels')
-    print(operator.permissions)
+    # print(operator.permissions)
     # input()
+    print(operator.attr_types)
 
+    ### TODO: NEW OPERATION
+    pprint(operator.proximity('Point(-91.02 30.13)', 1000))
     ### Get filterable items
     # pprint(operator.fetch_filter_options())
     # input()
@@ -402,11 +490,13 @@ if __name__ == "__main__":
     # input()
 
     ### Add
-    operator.add(entity)
-    operator.commit()
+    # operator.add(entity)
+    # operator.commit()
 
     ### Query
     # pprint(operator.query([{"mmsi":368261120}])) # Table should have new entity
+    # pprint(operator.query([]))
+    # pprint(operator.query([{}]))
     # input()
     
     ### Modify
@@ -417,9 +507,10 @@ if __name__ == "__main__":
     # input()
 
     ### Delete
-    operator.delete(("mmsi",368261120))
+    # operator.delete(entity)
+    # operator.delete({'mmsi':1234})
     # operator.commit()
-    # pprint(operator.query(("mmsi",368261120)))
+    # pprint(operator.query([{"mmsi":368261120}]))
 
     operator.close()
 
