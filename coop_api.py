@@ -57,13 +57,12 @@ for station in data['stations']:
     entity = {
         "id": station['id'],
         "name": station['name'],
-        "type": f"NOAA-{station['affiliations']}",
-        "lat": station['lat'],
-        "lon": station['lng'],
-        "APIS": apis,
-        "region": "US",
+        "region": "USA",
+        "type": f"NOAA-{station['affiliations']}", # Cannot be "API"
+        "datums": apis, # Check if URI returns 200 or not
+        # Following CANNOT BE NULL
         "timezone": f"{station['timezone']} (GMT {station['timezonecorr']})",
-        "geom": "NULL"
+        "geom": f"Point({station['lng']} {station['lat']})",
     }
 
     pprint(entity)
@@ -71,6 +70,11 @@ for station in data['stations']:
     # sources = DBOperator(db="capstone",table="sources")
     # sources.add(entity)
     input()
+
+"""
+^^^ ABOVE IS WHAT IS IMPORTANT
+vvv BELOW IS WHAT I WANNA RUN TO PULL DATA
+"""
 
 """
 API Key:
@@ -98,10 +102,6 @@ API Key:
 20. notices
 """
 
-"""
-^^^ ABOVE IS WHAT IS IMPORTANT
-vvv BELOW IS WHAT I WANNA RUN TO PULL DATA
-"""
 def query(url: str) -> dict:
     response = requests.get(url)
     print(f"STATUS: {response.status_code}")

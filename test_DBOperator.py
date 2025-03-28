@@ -5,21 +5,22 @@ from pprint import pprint
 
 """
 // TODO
-- Items to test
     - DBOperator
         - feed it all sorts of data and reqeusts to push/pull
-- Things to test for
-    - Initializing DB connection and cursor
-    - Can handle a pending request for up to a specified time
-        - If timeout, then produce an output to console
-        - throws error to be handled above
-    - Can properly package PostGIS stuff for client to process
-    - Can handle invalid key: values properly
-    - Can properly add/remove/change entries inside DB
-    - Can properly call PostGIS commands by providing valid entities, or interpretable errors
-    - Only accepts valid DB Users
-    - add()/modify() fails if INSERT permissions fail
-    - delete() fails if DELETE permissions fail
+
+- Initializing DB connection and cursor
+- Can handle a pending request for up to a specified time
+    - If timeout, then produce an output to console
+    - throws error to be handled above
+- Can properly package PostGIS stuff for client to process
+- Can handle invalid key: values properly
+- Can properly add/remove/change entries inside DB
+- Can properly call PostGIS commands by providing valid entities, or interpretable errors
+- Only accepts valid DB Users
+- add()/modify() fails if INSERT/UPDATE permissions fail
+- query() fails if SELECT permissions fail
+- delete() fails if DELETE permissions fail
+- Generic functions (add,query,modify,delete, get_table,attrs,privileges) operate regardless of table
 """
 @pytest.mark.init
 class TestInit:
@@ -423,6 +424,9 @@ class TestModification():
         self.db = DBOperator(table="vessels")
         self.result = None
 
+
+# TODO: Test DBOperator functions for all tables!
+
 if __name__ == "__main__":
     entity = {
         'callsign': 'WDN2333',
@@ -446,7 +450,43 @@ if __name__ == "__main__":
         'width': 23.0
     }
 
-    operator = DBOperator(table='vessels')
+    vessels = DBOperator(table='vessels')
+    # pprint(vessels.proximity('Point(-91.02 30.13)', 1000))
+    print(len(vessels.get_table()))
+    vessels.close()
+
+    zones = DBOperator(table='zones')
+    print(len(zones.get_table()))
+    zones.close()
+
+    # FIXME: BROKIE
+    # events = DBOperator(table='events')
+    # met = DBOperator(table='meteorology')
+    # mocks = DBOperator(table='mock_ships')
+    # oce = DBOperator(table='oceanography')
+    # ports = DBOperator(table='ports')
+    # presets = DBOperator(table='presets')
+    # sources = DBOperator(table='sources')
+    # users = DBOperator(table='users')
+
+    # print(len(events.get_table()))
+    # events.close()
+    # print(len(met.get_table()))
+    # met.close()
+    # print(len(mocks.get_table()))
+    # mocks.close()
+    # print(len(oce.get_table()))
+    # oce.close()
+    # print(len(ports.get_table()))
+    # ports.close()
+    # print(len(presets.get_table()))
+    # presets.close()
+    # print(len(sources.get_table()))
+    # sources.close()
+    # print(len(users.get_table()))
+    # users.close()
+
+    # operator = DBOperator(table='zones')
     # operator = DBOperator(table='vessels',host='localhost',port='5432')
     # input()
 
@@ -455,10 +495,8 @@ if __name__ == "__main__":
     # input()
 
     ### Filters
-    filters = [
-        { "status": "FISHING",
-         },
-    ]
+    # filters = [{'type' : 'FISHING','current_status': "anchored"}] # querying multple values for one attribute
+    # pprint(operator.query(filters))
     # pprint(len(operator.query(filters)))
     # input()
 
@@ -467,8 +505,8 @@ if __name__ == "__main__":
     # operator.commit()
 
     ### Query
-    # pprint(operator.query({"mmsi":368261120})) # Table should have new entity
-    # input()
+    # pprint(operator.query([{"mmsi": 368261120}])) # Table should have new entity
+    # pprint(len(operator.query([{"id":'ANZ650'}]))) # Table should have new entity
     
     ### Modify
     # operator.modify(("mmsi",368261120),{'speed':0.0})
@@ -482,3 +520,4 @@ if __name__ == "__main__":
     # operator.commit()
     # pprint(operator.query(("mmsi",368261120)))
 
+    # operator.close()
