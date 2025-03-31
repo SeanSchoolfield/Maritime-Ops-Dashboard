@@ -7,6 +7,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from DBOperator import DBOperator
+import linear_regression
+import linear_regression_2
 
 app = FastAPI()
 
@@ -116,7 +118,7 @@ async def get_filtered_vessels(
     status: str = Query(None, description="Filter by vessel status")
 ):
     """
-    Fetch vessel data filter options.
+    Fetch vessel data based on provided filters.
     """
     db = connect_to_vessels()
     try:
@@ -130,10 +132,11 @@ async def get_filtered_vessels(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching metadata for vessels: {str(e)}")
 
-
+    # Assemble filters
     types_list = type.split(',') if type else []
     filters = {}
 
+    # Include filters only if they have values
     if types_list:
         filters["type"] = types_list
 
@@ -143,48 +146,31 @@ async def get_filtered_vessels(
     if status:
         filters["current_status"] = status
 
-    if not types_list:
-        print("### Fast Server: All vessel types unchecked → Returning empty payload.")
-        payload['payload'] = []
-        payload["size"] = 0
-        return payload
-
-    print("### Fast Server: Assembling Payload...")
-    # Ignore empty filters
-    filters = {key: value for key, value in {
-        "type": types_list,
-        "flag": origin if origin else None,
-        "current_status": status if status else None
-    }.items() if value}
-
-
+    # Proceed with query if filters are present, otherwise return all vessels
     print(f"### Websocket: Filters:\n{filters}")
-    if len(filters) > 0:
-        queries = []
-        filter_parser(filters,queries)
+    
+    try:
+        if filters:  # If any filters are provided
+            queries = []
+            filter_parser(filters, queries)
 
-        # NOTE: Bandaid for BAD RECURSION!
-        # This is because my recursion sucks so there's a chance for duplicates
-        # when more than 1 attribute has multiple values
-        queries = [dict(t) for t in {tuple(d.items()) for d in queries}]
+            # Remove duplicates from queries array
+            queries = [dict(t) for t in {tuple(d.items()) for d in queries}]
 
-        print(f"### Websocket: query array:")
-        pprint(queries)
+            print(f"### Websocket: query array:")
+            pprint(queries)
 
-        ### IF DB connection successful, attempt assembling payload
-        try:
-            # Return all vessels if no filters are provided
             payload["payload"] = db.query(queries)
-            payload["size"] = len(payload["payload"])
-            return payload
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error fetching vessels: {str(e)}")
-    # Return all vessels if no filters are provided
-    else:
-        payload['payload'] = db.get_table()
+        else:
+            # Return all vessels if no filters are provided
+            payload["payload"] = db.get_table()
+
         payload["size"] = len(payload["payload"])
         return payload
-    db.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching vessels: {str(e)}")
+    finally:
+        db.close()
 
 @app.get("/filters/", response_model=dict)
 async def get_filter_options():
@@ -251,3 +237,10 @@ async def query_metadata():
     finally:
         operator.close() # Closes table instance
         return payload
+    
+@app.get("/prediction/{lon}/{lat}")
+async def predict_path(lon: float, lat: float):
+    print(f"Received coordinates - Longitude: {lon}, Latitude: {lat}")
+    # linear_regression.perform_training_manually()
+    predictions = linear_regression_2.perform_vessel_prediction(lat, lon)
+    return predictions.to_dict(orient="records")

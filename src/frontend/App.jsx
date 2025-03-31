@@ -12,6 +12,9 @@ import { Viewer } from "resium";
 import { SceneMode } from "cesium";
 import axios from "axios";
 import OverlaysUI from "./utilities/overlays/OverlaysUI";
+import PredictedPath from "./utilities/PredictedPath";
+import { Cartesian3, Color, HeightReference } from "cesium";
+import { Entity } from "resium";
 
 function App() {
   const [isDrawing, setIsDrawing] = useState(false);
@@ -26,6 +29,8 @@ function App() {
   const [viewerReady, setViewerReady] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [clickedCoordinates, setClickedCoordinates] = useState({ lat: null, lon: null });
+  const [predictions, setPredictions] = useState([]);
 
   const viewerRef = useRef(null);
   const URL = window.location.href.split(':');
@@ -228,6 +233,57 @@ function App() {
     await fetchVessels(filters);
   }
 
+  const handlePathPrediction = async () => {
+    if (clickedCoordinates.lat !== null && clickedCoordinates.lon !== null) {
+      toast.info(`Lon: ${clickedCoordinates.lon}, Lat: ${clickedCoordinates.lat}`);
+    } else {
+      toast.info("No coordinates available");
+    }
+    var lon = clickedCoordinates.lon;
+    var lat = clickedCoordinates.lat;
+    var url = "http://127.0.0.1:8000/prediction/" + String(lon) + "/" + String(lat);
+    const res = await axios.get(url);
+    setPredictions(res.data);
+    placeDot(res.data)
+  }
+
+  function placeDot(data) {
+    // Validate and extract values from the data object
+    console.log(data)
+    const { 'Predicted LAT': latitude, 'Predicted LON': longitude, 'Hours Ahead': hoursAhead } = data;
+
+    const numLongitude = Number(longitude);
+    const numLatitude = Number(latitude);
+
+    if (isNaN(numLongitude) || isNaN(numLatitude)) {
+        console.warn(`Invalid coordinates for prediction at T+${hoursAhead}h`, { longitude, latitude });
+        return null;
+    }
+
+    const position = Cartesian3.fromDegrees(numLongitude, numLatitude);
+
+    return (
+      <Entity
+          key={`dot-${hoursAhead}-${longitude}-${latitude}`}
+          position={position}
+          point={{
+              pixelSize: 10,
+              color: Color.YELLOW,
+              outlineWidth: 2,
+              heightReference: HeightReference.CLAMP_TO_GROUND,
+          }}
+          label={{
+              text: `T+${hoursAhead}h`,
+              font: "10pt sans-serif",
+              fillColor: Color.LIGHTBLUE,
+              outlineColor: Color.BLACK,
+              outlineWidth: 2,
+              pixelOffset: new Cartesian3(0, -25, 15),
+          }}
+      />
+    );
+}
+
   // Debug
   console.log("Selected Geometry:", selectedGeometry);
   console.log("selectedGeometry Name: ", selectedGeometry?.name);
@@ -267,6 +323,8 @@ function App() {
           ) || <div key={vessel['mmsi']}>Invalid Vessel Data</div>
         )}
 
+        {predictions && predictions.map((item, index) => placeDot(item))}
+
         <CustomGeometry
           viewer={viewerRef}
           viewerReady={viewerReady}
@@ -277,6 +335,7 @@ function App() {
           setShowContextMenu={setShowContextMenu}
           setContextMenuPosition={setContextMenuPosition}
           setShowSettings={setShowSettings}
+          setClickedCoordinates={setClickedCoordinates}
         />
       </Viewer>
 
@@ -298,6 +357,7 @@ function App() {
           <button onClick={() => setShowSettings(true)}>Settings</button>
           <button onClick={handleDelete}>Delete</button>
           <button onClick={() => setShowSettings(true)}>Rename</button>
+          <button onClick={() => {handlePathPrediction()}}>Predict Path</button>
         </div>
       )}
 

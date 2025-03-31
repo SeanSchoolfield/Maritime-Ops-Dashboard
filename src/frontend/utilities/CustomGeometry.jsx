@@ -10,11 +10,12 @@ import { useEffect, useRef, useState } from "react";
 import { convertCartesianToDegrees } from "./coordUtils";
 import * as Cesium from "cesium";
 
-const CustomGeometry = ({ viewer, viewerReady, isDrawing, setSelectedGeometry, setShowContextMenu, setContextMenuPosition, setShowSettings, geometries, setGeometries }) => {
+const CustomGeometry = ({ viewer, viewerReady, isDrawing, setSelectedGeometry, setShowContextMenu, setContextMenuPosition, setShowSettings, geometries, setGeometries, setClickedCoordinates }) => {
     const [positions, setPositions] = useState([]);
     const handlerRef = useRef(null);
     const lastClickTimeRef = useRef(0);
     const doubleClickDetectedRef = useRef(false);
+    
 
     useEffect(() => {
         console.log("useEffect executed", { viewerReady, isDrawing });
@@ -32,6 +33,16 @@ const CustomGeometry = ({ viewer, viewerReady, isDrawing, setSelectedGeometry, s
         handler.setInputAction((click) => {
             console.log("Right-click registered at position:", click.position);
             const pickedEntity = scene.pick(click.position);
+            const cartesian = scene.camera.pickEllipsoid(click.position, scene.globe.ellipsoid);
+            
+            if (cartesian) {
+                const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+                const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+                setClickedCoordinates({ lat: latitude, lon: longitude });
+                console.log("Converted coordinates:", { latitude, longitude });
+            }
+
             if (Cesium.defined(pickedEntity)) {
                 console.log("Right-click on entity:", pickedEntity);
                 setSelectedGeometry(pickedEntity.id);
