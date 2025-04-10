@@ -1,0 +1,51 @@
+### Topology
+- Processors (Producer(P), Conumser(C))
+    - APIs:
+        - weather_api.py (P,C)
+            - DB interaction: read/modify sources, zones, events, met
+        - gfw_api.py (P,C)
+            - DB interaction: read/modify sources, zones, events, vessels
+        - coop_api.py (P,C)
+            - DB interaction: read/modify sources, zones, events, met, oce
+    - Websocket (C)
+        - handles all interactions from Client
+        - Reads from Kafka topics
+        - User login/registration
+        - Filtering commands
+    - DB Manager (P,C)
+        - Primarily for actions sent by websocket
+            - User registration/login
+            - Client-side zoning, vessel adds, filtering
+        - DB interaction read/modify all tables
+
+### Topics
+- Events
+    - Vessel alerts
+    - station alerts
+- Meteorology
+    - temp, visibility, humidity, wind velocity, etc.
+- Oceanography
+    - current, water temp, water height, etc.
+- Vessel_Tracking
+    - historical data, path prediction, real-time position/heading/speed
+- Client zone (After login)
+- Client vessel (After login)
+
+### Dataflow
+- Dataflow is expected to be strict. Component with multiple flows is expected to be distinct
+    - e.g: DOES NOT CROSS OVER
+- Production
+    DB manager > kafka topic
+    API processor > DB manager > database
+    API processor > Kafka topic
+    Client > websocket > DB manager > database
+- Consumption
+    Client < websocket < Kafka topic
+    DB manager < Kafka topic
+    DB manager < database
+    API processor < Kafka topic
+
+### Interactions
+- Kafka topics for event, met, oce, be processed
+    - identify matching criteria each src_id with source.id in zone.src_id
+    - vessel.mmsi either within Polygon region, or within specific range of Point

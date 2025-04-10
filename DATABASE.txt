@@ -1,0 +1,50 @@
+### Tables and what I expect each processor to do when manipulating DB entities
+- EVENTS
+    id, src_id, timestamp, effective, end, expires, active, type, description, instructions, urgency, severity, 
+    - noaa event
+        - type = "{category}-{messageType}"
+        - Do I track replacement time/Replacement ID?
+    - issued by vessels 
+        - src_id = vessels.mmsi
+        - some report start/stop fishing, useful to update vessel.current_status
+    - issued by sources (stations)
+        - src_id = sources.id
+
+- SOURCES
+    - ID is unique
+    - Can be API
+        - ID auto generated if not applied
+        - type = "API"
+        - geom = NULL
+        - timezone = NULL
+        - datum = API keys (Add datums column)
+    - Can be Station
+        - ID = reported zone ID
+        - type != "API"
+        - geom NOT NULL
+        - timezone NOT NULL
+        - datums = APIs/details it reports (what met data, ocean data, events, etc)
+    - refer to disseminate Met, Oce, Events
+
+- ZONES
+    id, geom, region, name, type, src_id
+
+- METEOROLOGY/OCEANOGRAPHY
+    id, src_id, lat, lon, temp, humidity, wind_speed, wind_heading, percipitation, forecast, timestamp, geom, event_id, region
+    - geometry: WHY? What about storing zone_id instead?
+    - event_id: Why try and associate an event with report?
+    - Met.forecast: Should I provide instantaneous hourly forecast, and then just update every hour, or should I provide an array of forecast and then update that every hour?
+
+### How I expect interactions with DB to go
+- selecting a ship/double-click on location
+    - bring up meteorology
+        - use zone.id = met.zone_id to relevant met, OR zone src_id pull new met from API
+    - bring up oceanography
+        - use zone.id = oce.zone_id to filter most recent oce, OR zone src_id pull new oce from API
+    - bring up events
+        - use zone.src_id to filter for events, OR pull new ones with zone.id
+        - use vessels.mmsi for all ships in [proximity] of point to filter with events
+- Selecting zone
+    - met and ocean works the same
+    - retrieves all vessels within zone
+        - retrieves all events that have a src.id = vessel.mmsi

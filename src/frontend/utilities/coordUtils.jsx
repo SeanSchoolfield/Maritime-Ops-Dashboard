@@ -13,8 +13,8 @@ export const convertCartesianToDegrees = (cartesian) => {
     }
 
     const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-    const latitude = Cesium.Math.toDegrees(cartographic.latitude);
-    const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+    const latitude = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
+    const longitude = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
 
-    return { latitude, longitude };
+    return { longitude,latitude };
 };

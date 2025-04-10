@@ -2,7 +2,7 @@ import React from 'react'
 import { Entity } from 'resium'
 import { Cartesian3, DistanceDisplayCondition, NearFarScalar, HeightReference } from 'cesium'
 import ReactDOMServer from 'react-dom/server'
-import BoatIcon from "../../assets/icons/boatIcon"
+import BoatIcon from "../../assets/icons/boatIcon";
 
 export function placeVessel(longitude, latitude, heading, elevation = 0, type = "OTHER", name = "UNKOWN") {
     // Convert values to numbers and validate

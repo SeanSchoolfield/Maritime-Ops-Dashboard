@@ -7,148 +7,44 @@ from datetime import datetime
 from json import loads, dumps
 from DBOperator import DBOperator
 
+# WARNING: Currently have 1206 entities in Vessels, and it's making the app LAG TF OUT!
 """
 // TODO
-- RUN THIS SCRIPT
-    - Make sure I can track failures to avoid duplicates and add them again later!
-"""
 
+Algoritm:
+- Run Me!
+- When I error:
+    - If I error out on row 2, see how many rows already exist in DB, up until a row doesn't
+    - If I don't error out on row 2, delete all rows up until row that errors out
+"""
+dubs = 0
 vessels = DBOperator(db="capstone",table="vessels")
 
-headers = "mmsi vessel_name callsign timestamp heading speed current_status src type flag length width draft cargo_weight geom lat lon dist_from_shore dist_from_port".split()
-with open("failures.csv", 'w',newline='') as outFile:
-    writer = csv.writer(outFile, delimiter=',')
-    writer.writerow(headers)
+failures = []
 
-# gfw_data = "" # Turn this into a an argument to pass in data from command line
-others = 'gfw-data/unknown.csv'
-count = 0 # Counting entities processed
-ads = 0 # entities capable to be pushed to DB
-dubs = 0 # successful pushes to DB
-
-# for file in gfw_data:
-#     print(f"### Importing {file} to Vessels table...")
-#     with open(file, newline='') as inFile:
-#         data = csv.reader(inFile, delimiter=',')
-#         headers = next(data, None)
-#         for row in data:
-#             entity = {}
-#             entity['mmsi'] = int(float(row[0])) # mmsi
-#             entity['vessel_name'] = ''
-#             entity['callsign'] = ''
-#             entity['timestamp'] = f"{datetime.fromtimestamp(int(float(row[1])))}".replace(" ","T") # timestamp
-#             if len(row[5]) != 0:
-#                 entity['heading'] = round(float(row[5]), 2) # course (assuming degrees)
-#             else:
-#                 entity['heading'] = 0.0
-#             if len(row[4]) != 0:
-#                 entity['speed'] = round(float(row[4]), 2) # speed (assuming knots)
-#             else:
-#                 entity['speed'] = 0.0
-#             if int(float(row[8])) > 0:
-#                 entity['current_status'] = "fishing"
-#             else:
-#                 entity['current_status'] = "anchored"
-#             entity['src'] =  f"GFW-{row[9]}" # source
-#             entity['type'] = "FISHING"
-#             entity['flag'] = "OTHER"
-#             entity['length'] = 0.0
-#             entity['width'] = 0.0
-#             entity['draft'] = 0.0
-#             entity['cargo_weight'] = 0.0
-#             if len(row[6]) != 0:
-#                 entity['lat'] = round(float(row[6]), 4) # lat
-#             else:
-#                 entity['lat'] = 0.0
-#             if len(row[7]) != 0:
-#                 entity['lon'] = round(float(row[7]), 4) # lon
-#             else:
-#                 entity['lon'] = 0.0
-#             if len(row[2]) != 0:
-#                 entity['dist_from_shore'] = round((float(row[2])), 2) # assuming in m
-#             else:
-#                 entity['dist_from_shore'] = 0.0
-#             if len(row[3]) != 0:
-#                 entity['dist_from_port'] = round((float(row[3])), 2) # assuming in m
-#             else:
-#                 entity['dist_from_port'] = 0.0
-#             entity['geom'] = f"Point({entity['lon']} {entity['lat']})"
-
-#             count += 1 # incrament counter
-#             try:
-#                 vessels.add(entity)
-#                 vessels.commit()
-#                 ads += 1
-#             except Exception:
-#                 with open('failures.csv', 'a', newline='') as outFile:
-#                     writer = csv.DictWriter(outFile, delimiter=',', fieldnames=entity.keys())
-#                     writer.writerow(entity)
-#     input(f"{count} entities processed, with {ads} ready for push. Continue?")
-#     vessels.get_table()
-#     dubs += ads
-#     count = 0 # reset counter
-#     ads = 0
-
-# with open(others, newline='') as inFile:
-#     data = csv.reader(inFile, delimiter=',')
-#     headers = next(data, None)
-#     for row in data:
-#         entity = {}
-#         entity['mmsi'] = int(float(row[0])) # mmsi
-#         entity['vessel_name'] = ''
-#         entity['callsign'] = ''
-#         entity['timestamp'] = f"{datetime.fromtimestamp(int(float(row[1])))}".replace(" ","T") # timestamp
-#         if len(row[5]) != 0:
-#             entity['heading'] = round(float(row[5]), 2) # course (assuming degrees)
-#         else:
-#             entity['heading'] = 0.0
-#         if len(row[4]) != 0:
-#             entity['speed'] = round(float(row[4]), 2) # speed (assuming knots)
-#         else:
-#             entity['speed'] = 0.0
-#         if int(float(row[8])) > 0:
-#             entity['current_status'] = "unkown"
-#         else:
-#             entity['current_status'] = "anchored"
-#         entity['src'] =  f"GFW-{row[9]}" # source
-#         entity['type'] = "OTHER"
-#         entity['flag'] = "OTHER"
-#         entity['length'] = 0.0
-#         entity['width'] = 0.0
-#         entity['draft'] = 0.0
-#         entity['cargo_weight'] = 0.0
-#         if len(row[6]) != 0:
-#             entity['lat'] = round(float(row[6]), 4) # lat
-#         else:
-#             entity['lat'] = 0.0
-#         if len(row[7]) != 0:
-#             entity['lon'] = round(float(row[7]), 4) # lon
-#         else:
-#             entity['lon'] = 0.0
-#         if len(row[2]) != 0:
-#             entity['dist_from_shore'] = round((float(row[2])), 2) # assuming in m
-#         else:
-#             entity['dist_from_shore'] = 0.0
-#         if len(row[3]) != 0:
-#             entity['dist_from_port'] = round((float(row[3])), 2) # assuming in m
-#         else:
-#             entity['dist_from_port'] = 0.0
-#         entity['geom'] = f"Point({entity['lon']} {entity['lat']})"
-
-#         count += 1
-#         try:
-#             vessels.add(entity)
-#             vessels.commit()
-#             ads += 1
-#         except Exception:
-#             with open('failures.csv', 'a', newline='') as outFile:
-#                 writer = csv.DictWriter(outFile, delimiter=',', fieldnames=entity.keys())
-#                 writer.writerow(entity)
-# input(f"{count} entities processed, with {ads} ready for push. Continue?")
-# vessels.get_table()
-# dubs += ads
-# count = 0 # reset counter
-# ads = 0
+def convert_status(var):
+        if var in "1".split(',') or var == "anchored":
+            return "ANCHORED"
+        elif var in "2".split(','):
+            return "UNMANNED"
+        elif var in "3,4".split(','):
+            return "LIMITED MOVEMENT"
+        elif var in "5".split(','):
+            return "MOORED"
+        elif var in "6".split(','):
+            return "AGROUND"
+        elif var in "7".split(','):
+            return "FISHING"
+        elif var in "0,8".split(','):
+            return "UNDERWAY"
+        elif var in "9,10".split(','):
+            return "HAZARDOUS CARGO"
+        elif var in "11,12".split(','):
+            return "IN TOW"
+        elif var in "14".split(','):
+            return "EMERGENCY"
+        else:
+            return "UNKNOWN"
 
 cadastre='MarineCadastre_2024-12-30/AIS_2024_09_30.csv'
 
@@ -163,88 +59,97 @@ with open(cadastre, newline='') as inFile:
     data = csv.reader(inFile, delimiter=',')
     headers = next(data, None)
     for row in data:
-        entity = {}
-        entity['mmsi'] = int(float(row[0])) # mmsi
-        entity['vessel_name'] = row[7]
-        entity['callsign'] = row[9]
-        entity['timestamp'] = row[1] # UTC datetime
+        vessel = {}
+        vessel['mmsi'] = int(float(row[0])) # mmsi
+        vessel['geom'] = f"Point({row[4]} {row[3]})"
+        if len(row[7]) == 0:
+            vessel['vessel_name'] = "UNKNOWN"
+        else:
+            vessel['vessel_name'] = row[7]
+        vessel['callsign'] = row[9]
+        vessel['timestamp'] = row[1] # UTC datetime
         if len(row[5]) > 0:
-            entity['heading'] = round(float(row[5]), 2) # heading over ground degrees
+            vessel['heading'] = round(float(row[5]), 2) # heading over ground degrees
         else:
-            entity['heading'] = 0.0
-        # entity['heading'] = row[6] # true heading degrees
+            vessel['heading'] = 0.0
+        # vessel['heading'] = row[6] # true heading degrees
         if len(row[4]) > 0:
-            entity['speed'] = round(float(row[4]), 2) # knots
+            vessel['speed'] = round(float(row[4]), 2) # knots
         else:
-            entity['speed'] = 0.0
-        entity['current_status'] = row[11]
+            vessel['speed'] = 0.0
+        vessel['current_status'] = convert_status(row[11])
         # print("voyage")
-        entity['src'] = "MarineCadastre-AIS"
+        vessel['src'] = "MarineCadastre-AIS"
         # converging NAIS specs to TYPE
         if len(row[10]) > 0:
             ais_code = int(row[10])
             if ais_code in cargo:
-                entity['type'] = "CARGO"
+                vessel['type'] = "CARGO"
             elif ais_code in fishing:
-                entity['type'] = "FISHING"
+                vessel['type'] = "FISHING"
             elif ais_code in tanker:
-                entity['type'] = "TANKER"
+                vessel['type'] = "TANKER"
             elif ais_code in tug:
-                entity['type'] = "TUG"
+                vessel['type'] = "TUG"
             elif ais_code in passenger:
-                entity['type'] = "PASSENGER"
+                vessel['type'] = "PASSENGER"
             elif ais_code in recreational:
-                entity['type'] = "RECREATIONAL"
+                vessel['type'] = "RECREATIONAL"
         else:
-            entity['type'] = "OTHER"
-        entity['flag'] = "USA"
+            vessel['type'] = "OTHER"
+        vessel['flag'] = "USA"
         if len(row[12]) > 0:
-            entity['length'] = round(float(row[12]), 2) # meters
+            vessel['length'] = round(float(row[12]), 2) # meters
         else:
-            entity['length'] = 0.0
+            vessel['length'] = 0.0
         if len(row[13]) > 0:
-            entity['width'] = round(float(row[13]), 2) # meters
+            vessel['width'] = round(float(row[13]), 2) # meters
         else:
-            entity['width'] = 0.0
+            vessel['width'] = 0.0
         if len(row[14]) > 0:
-            entity['draft'] = round(float(row[14]), 2) # meters
+            vessel['draft'] = round(float(row[14]), 2) # meters
         else:
-            entity['draft'] = 0.0
+            vessel['draft'] = 0.0
         if len(row[15]) > 0:
-            entity['cargo_weight'] = round(float(row[15]), 2)
+            vessel['cargo_weight'] = round(float(row[15]), 2)
         else:
-            entity['cargo_weight'] = 0.0
+            vessel['cargo_weight'] = 0.0
         if len(row[2]) > 0:
-            entity['lat'] = round(float(row[2]), 2)
+            vessel['lat'] = round(float(row[2]), 2)
         else:
-            entity['lat'] = 0.0
+            vessel['lat'] = 0.0
         if len(row[3]) > 0:
-            entity['lon'] = round(float(row[3]), 2)
+            vessel['lon'] = round(float(row[3]), 2)
         else:
-            entity['lon'] = 0.0
-        entity['dist_from_port'] = 0.0
-        entity['dist_from_shore'] = 0.0
-        entity['geom'] = f"Point({entity['lon']} {entity['lat']})"
+            vessel['lon'] = 0.0
+        vessel['dist_from_port'] = 0.0
+        vessel['dist_from_shore'] = 0.0
         # print(f"IMO: {row[8]}") # International Maritime Organization Vessel number
         # print(f"tranciever class: {row[16]}") # AIS tranciever class
 
-        # pprint(entity)
-        # input()
         try:
-            vessels.add(entity)
+            # I forgot python doesn't treat parameters as local variables, so I
+            # was REALLY confused why this kept losing its geometry element
+            # during debugging... So I did this
+            vessels.add(vessel.copy())
             vessels.commit()
-            ads += 1
-        except Exception:
-            print("An error occured adding entity to failures CSV...")
-            with open('failures.csv', 'a', newline='') as outFile:
-                writer = csv.DictWriter(outFile, delimiter=',', fieldnames=entity.keys())
-                writer.writerow(entity)
+            dubs += 1
+        except Exception as e:
+            print(f"An error occured adding vessel to DB...\n{e}")
+            print("This vessel caused the failure:")
+            pprint(vessel)
+            input()
 
-input(f"{count} entities processed, with {ads} ready for push. Continue?")
-vessels.get_table()
-dubs += ads
-count = 0 # reset counter
-ads = 0
+            failures.append(vessel)
 
-input(f"{dubs} total pushes to DB. Satisfied?")
+print(f"{dubs} total pushes to DB.")
+print(f"{len(failures)} total vessels that weren't added to DB for some reason")
+
+# TODO: DUNNO IF THE FOLLOWING ACCURATELY SAVES DATA
+with open('failures.csv','w',newline='') as outFile:
+    writer = csv.DictWriter(outFile, delimiter=',', fieldnames=failures[0].keys())
+    writer.writeheader()
+    for goob in failures:
+        writer.writerow(goob)
+
 vessels.close()

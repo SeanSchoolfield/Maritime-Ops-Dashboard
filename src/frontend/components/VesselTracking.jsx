@@ -42,13 +42,13 @@ const useVesselTracking = (viewerRef, apiEndpoint) => {
       const transformedVessels = response.data.map((vessel) =>
         Array.isArray(vessel)
           ? {
-            id: vessel[0],
-            name: vessel[1],
-            type: vessel[2],
-            country_of_origin: vessel[3],
-            status: vessel[4],
-            latitude: vessel[5],
-            longitude: vessel[6]
+            id: vessel['mmsi'],
+            name: vessel['vessel_name'],
+            type: vessel['type'],
+            country_of_origin: vessel['flag'],
+            status: vessel['current_status'],
+            latitude: vessel['lat'],
+            longitude: vessel['lon']
           }
           : vessel
       );

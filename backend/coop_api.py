@@ -6,14 +6,10 @@ from pprint import pprint
 from json import loads, dumps
 from DBOperator import DBOperator
 
-"""
-// TODO
-- ADD stations to sources table
-    - Make sure DBOperator.add() is functioning as intended!
-    - iterate through ALL of data['stations']
-"""
-
+sources = DBOperator(db="capstone",table="sources")
 coop_stations_url = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json"
+failures = []
+dubs = 0
 
 r = requests.get(coop_stations_url)
 print(f"STATUS: {r.status_code}")
@@ -33,7 +29,7 @@ for station in data['stations']:
     apis = []
     for product in "air_temperature wind water_temperature air_pressure humidity conductivity visibility salinity water_level hourly_height high_low daily_mean monthly_mean one_minute_water_level predictions air_gap currents currents_predictions ofs_water_level".split():
         url = f"https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?date=latest&station={station['id']}&product={product}&datum=STND&time_zone=gmt&units=english&format=json"
-        print(product)
+        # print(product)
         apis.append(url)
 
     apis.append(station['datums']['self']) # append with datums
@@ -57,20 +53,47 @@ for station in data['stations']:
     entity = {
         "id": station['id'],
         "name": station['name'],
-        "type": f"NOAA-{station['affiliations']}",
-        "lat": station['lat'],
-        "lon": station['lng'],
-        "APIS": apis,
-        "region": "US",
+        "region": "USA",
+        "type": f"NOAA-{station['affiliations']}", # Cannot be "API"
+        "datums": apis, # Check if URI returns 200 or not
+        # Following CANNOT BE NULL
         "timezone": f"{station['timezone']} (GMT {station['timezonecorr']})",
-        "geom": "NULL"
+        "geom": f"Point({station['lng']} {station['lat']})",
     }
 
-    pprint(entity)
-    print(f"Adding entity to db...")
-    # sources = DBOperator(db="capstone",table="sources")
-    # sources.add(entity)
-    input()
+    # pprint(entity)
+
+    try:
+        print(f"Adding entity to db...")
+        sources.add(entity)
+        sources.commit()
+        dubs += 1
+    except Exception as e:
+        print(f"An error occured adding vessel to DB...\n{e}")
+        print("This vessel caused the failure:")
+        pprint(entity)
+        input()
+
+        failures.append(entity)
+
+print(f"{dubs} total pushes to DB.")
+print(f"{len(failures)} total sources weren't added to DB for some reason.")
+
+if len(failures) > 0:
+    # TODO: DUNNO IF THE FOLLOWING ACCURATELY SAVES DATA
+    with open('coop-failures.csv','w',newline='') as outFile:
+        writer = csv.DictWriter(outFile, delimiter=',', fieldnames=failures[0].keys())
+        writer.writeheader()
+        for goob in failures:
+            writer.writerow(goob)
+        input()
+
+sources.close()
+
+"""
+^^^ ABOVE IS WHAT IS IMPORTANT
+vvv BELOW IS WHAT I WANNA RUN TO PULL DATA
+"""
 
 """
 API Key:
@@ -98,10 +121,6 @@ API Key:
 20. notices
 """
 
-"""
-^^^ ABOVE IS WHAT IS IMPORTANT
-vvv BELOW IS WHAT I WANNA RUN TO PULL DATA
-"""
 def query(url: str) -> dict:
     response = requests.get(url)
     print(f"STATUS: {response.status_code}")

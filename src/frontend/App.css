@@ -28,6 +28,27 @@ body,
   position: absolute;
 }
 
+/* Make sure entities are visible */
+.cesium-entity-label,
+.cesium-billboard-image {
+  pointer-events: auto !important;
+  z-index: 1 !important;
+}
+
+/* Improved visibility for info box */
+.cesium-infoBox {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #444;
+  border-radius: 7px;
+  color: black;
+  max-width: 400px;
+}
+.cesium-infoBox-description,
+.cesium-infoBox-title {
+  background: rgba(255, 255, 255, 0.9);
+  color: black !important; 
+}
+
 .zone-settings-ui {
   position: absolute;
   top: 20%;
@@ -152,6 +173,7 @@ body,
   background: grey;
 }
 
+/* Styles for the UI controls */
 .ui-controls {
   position: absolute;
   top: 10px;
@@ -186,10 +208,9 @@ body,
   flex-direction: column;
   gap: 10px;
   position: absolute;
-  top: 5px;
-  left: 100%;
+  left: 105px;
   background: rgba(255, 255, 255, 0.9);
-  padding: 8px;
+  padding: 10px;
   border-radius: 5px;
   box-shadow: 0 2px 10px rgb(0, 0, 0, 0.3);
   z-index: 1000;
@@ -268,22 +289,10 @@ body,
   background: rgba(255, 255, 255, 0.9);
 }
 
-/* Make sure entities are visible */
-.cesium-entity-label,
-.cesium-billboard-image {
-  pointer-events: auto !important;
-  z-index: 1 !important;
-}
-
-/* Improved visibility for info box */
-.cesium-infoBox {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #444;
-  border-radius: 7px;
-  max-width: 300px;
-}
-
-.cesium-infoBox-title {
-  background: rgba(255, 255, 255, 0.9);
+.vessel-type-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  gap: 5px;
   color: black;
 }

@@ -60,6 +60,7 @@ CREATE TABLE zones (
     geom geometry NOT NULL, -- Polygon
     src_id varchar NOT NULL, -- REFERENCES sources(id),
     region varchar, -- US-IA
+    -- "High Seas" option can just be inverse of EEZ regions
     type varchar check (type in ('MET', 'MARINE', 'EEZ', 'PROTECTED', 'RESTRICTED-FISH'))
 );
 

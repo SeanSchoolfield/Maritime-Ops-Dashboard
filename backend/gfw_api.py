@@ -5,6 +5,11 @@ import requests
 from pprint import pprint
 from json import loads, dumps
 
+"""
+// TODO
+- Parse for vessels and updates!
+    - MATCH WHAT IS IN DB
+"""
 GFW_TOKEN = os.environ.get("TOKEN")
 
 if GFW_TOKEN == None:
@@ -46,15 +51,18 @@ def query(url: str) -> dict:
 """
 vessels_url = "https://gateway.api.globalfishingwatch.org/v3/vessels/search?query=mmsi&datasets[0]=public-global-vessel-identity:latest&includes[0]=MATCH_CRITERIA&includes[1]=OWNERSHIP&includes[2]=AUTHORIZATIONS"
 vessels = query(vessels_url)
-# pprint(vessels['entries'][1])
+pprint(vessels)
+# pprint(vessels['entries'])
 # pprint(vessels.keys())
+input()
 
 vessel = vessels['entries'][1]
 mmsi = vessel['selfReportedInfo'][0]['ssvid']
 vessel_url = f"https://gateway.api.globalfishingwatch.org/v3/vessels/search?query={mmsi}&datasets[0]=public-global-vessel-identity:latest&includes[0]=MATCH_CRITERIA&includes[1]=OWNERSHIP&includes[2]=AUTHORIZATIONS"
 
 vessel = query(vessel_url)
-# pprint(vessel['entries'])
+pprint(vessel['entries'])
+input()
 
 data = {
     "datasets": [
@@ -73,7 +81,6 @@ events = requests.post(events_url, headers=headers, json=data)
 print(events.status_code)
 pprint(events.json()['entries'])
 pprint(events.json().keys())
-
 input()
 
 """
@@ -93,7 +100,7 @@ Events
 ['vessel']
 - flag
 - name
-- ssvid
+- ssvid => events.src_id
 - type
 ['position']  = lat/lon
 ['type'] = current_status

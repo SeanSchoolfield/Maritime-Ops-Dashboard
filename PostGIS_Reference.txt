@@ -1,0 +1,87 @@
+### Meta Shell commands
+- launch psql with user `postgres`
+sudo -u postgres psql
+
+- enable postGIS
+postgres=# create extension postgis;
+
+- import csv into db:
+create table table in db (columns in csv);
+copy [TABLE] from `./gfw-data/*.csv` with (format csv);
+
+- Import sql into db:
+    createdb [DB]
+    psql [DB] < {filepath}.sql
+
+- Export db as sql file:
+    pg_dump [DB] > {filename}.sql
+
+- Export a specific table to an sql file:
+    pg_dump --table=[TABLE NAME] [DB] > {filename}.sql
+
+### DB location on my machine
+- Config file: /var/lib/pgsql/data/postgresql.conf
+- data directory: /var/lib/pgsql/data
+
+### PostGIS functions (https://postgis.net/workshops/postgis-intro/geometries.html#function-list)
+- Linestring functions
+ST_Length(geom): Length of linestring as double(?)
+ST_StartPoint(geom): first coordinate as a Point
+ST_EndPoint(geom): last coordinate as a Point
+ST_NPoints(geom): number of coordinates in linestring as int(?)
+
+- Polygon functions
+ST_Area(geom): area of Polygon as double(?)
+ST_NRings(geom): number of "rings" as int(?)
+    - Assume they mean boundaries
+    - Typically 1, unless polygon has holes
+ST_ExteriorRing(geom): outer "ring" as Linestring
+ST_InteriorRingN(geom,n): interior ring 'n' as a Linestring
+ST_Perimeter(geom): returns length of all rings as a double(?)
+
+- Collection functions
+ST_NumGeometries(geom): Number of parts in Collection as int(?)
+ST_GeometryN(geom,n): specific simple geometry 'n'
+ST_Area(geom): total area of all Polygon parts as double(?)
+ST_Length(geom): total length of all linear parts as double(?)
+    - assuming this includes Linestrings and ST_Perimeter(geom) for Polygons
+
+- Converting Geometry objects
+    - text
+        ST_GeomFromText(text,srid): insert `geometry` from text with given srid
+        ST_AsText(geom): returns data as a column in text
+        ST_AsEWKT(geom): returns as text
+            - what's the diff btwn EWKT, WKT, and regular text??
+    - binary
+        ST_GeomFromWKB(bytea): insert `geometry` from byte array
+        ST_AsBinary(geom): returns data as binary
+        ST_EWKB(geom): returns data as binary
+        - Will need to execute an `Select encode(ST_AsBinary(*))` in order to convert binary into ASCII
+    - GeoJSON
+        ST_AsGeoJSON(geom): returns geom data as text, JSON-formatted
+    - Scalable Vector Graphics (SVG)
+        ST_AsSVG(geom): returns geom data as text, SVG-formatted
+    - type casting between Geometry SRIDs and/or Geography
+        ST_Transform()
+
+- Conditionals
+ST_Equals(geomA,geomB): equality between two geometries
+ST_Intersects(geomA,geomB): whether interiors of geometires share common space
+ST_Disjoint(geomA,geomB): whether interiors of geometries DO NOT intersect
+    - Not spatially indexed, unlinek ST_Intersects(); recommended to use not ST_Intersects() instead
+ST_Crosses(geomA,geomB): whether intersection is one less dimension than the max dimension between geomA and geomB
+    - Ex: Does a Linestring cross into a Polygon?
+    - also checks geomA and geomB intersect
+ST_Overlaps(geomA,geomB): whether two geometries of the same dimension have a set intersection with the same dimesnion
+    - Ex: does two Polygon "areas" share points?
+    - also checks of geomA and geomB
+ST_Touches(geomA,geomB): whether two geometries touch at boundaries, but interiors DO NOT intersect
+ST_Contains(geomA,geomB): whether geomB is fully within geomA
+ST_Within(geomA,geomB): whether geomA is fully within geomB
+ST_Distance(geomA,geomB): shortest distance between two geometries as double
+ST_DWithin(geomA,geomB,n): whether geomB is within n distance of geomA
+    - scales pseudo-area from geomA by n 
+
+### NOTICES
+- MUST EXECUTE `create extension postgis;` BEFORE IMPORTING ANY DATA
+    otherwise spatial_ref_sys, geom, metadata shit all breaks down

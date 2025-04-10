@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
+/**
+ * Custom hook to fetch filter options for vessels.
+ * @param {string} apiEndpoint - API endpoint to fetch filter options.
+ * @returns {Object} - Contains filter options, selected filters, loading state, and error message.
+ * @description This hook fetches filter options from the API and manages the selected filters state.
+ */
+
 const useFetchFilters = (apiEndpoint) => {
     const [filterOptions, setFilterOptions] = useState({
         types: [],
@@ -29,7 +36,8 @@ const useFetchFilters = (apiEndpoint) => {
 
                     setSelectedFilters({
                         ...selectedFilters,
-                        types: data.types
+                        types: data.types,
+                        statuses: data.current_status
                     });
                 }
             })

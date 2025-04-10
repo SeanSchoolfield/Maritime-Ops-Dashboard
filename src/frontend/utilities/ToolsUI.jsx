@@ -3,15 +3,33 @@ import Overlays from "./overlays/OverlaysUI";
 import FiltersUI from "./filters/FiltersUI";
 import useFetchFilters from "./filters/Filters";
 
+/**
+* ToolsUI component that provides a user interface for various tools and overlays.
+* It includes buttons for toggling drawing, undoing actions, clearing the canvas,
+* selecting shapes, and applying filters.
+*
+* @param {function} onToggleDrawing - Function to toggle drawing mode.
+* @param {function} onUndo - Function to undo the last action.
+* @param {function} onClear - Function to clear the canvas.
+* @param {function} onSelectShape - Function to select a shape type.
+* @param {string} apiEndpoint - API endpoint for fetching filter options.
+* @param {function} onFilterApply - Function to apply selected filters.
+*
+* @returns {JSX.Element} The rendered ToolsUI component.
+* @description This component manages the state of the UI controls,
+* including the visibility of different panels (tools, overlays, filters).
+* It uses the useFetchFilters hook to fetch filter options from the API.
+*/
+
 const ToolsUI = ({ onToggleDrawing, onUndo, onClear, onSelectShape, apiEndpoint, onFilterApply }) => {
     const [openPanel, setOpenPanel] = useState(false);
-    const [selectedShape, setSelectedShape] = useState("polygon");
+    // const [selectedShape, setSelectedShape] = useState("polygon");
     const { loading, error } = useFetchFilters(apiEndpoint);
 
-    const handleShapeChange = (event) => {
-        setSelectedShape(event.target.value);
-        onSelectShape(event.target.value);
-    };
+    // const handleShapeChange = (event) => {
+    //     setSelectedShape(event.target.value);
+    //     onSelectShape(event.target.value);
+    // };
 
     const handleToggle = (panel) => {
         setOpenPanel((prev) => (prev === panel ? null : panel));
@@ -21,15 +39,15 @@ const ToolsUI = ({ onToggleDrawing, onUndo, onClear, onSelectShape, apiEndpoint,
         <div className="ui-controls">
             {/*Button to expand/collapse sidebars*/}
             <button onClick={() => handleToggle("tools")}>
-                {openPanel === "tools" ? "Close" : "Tools"}
+                {openPanel === "tools" ? "Tools" : "Tools"}
             </button>
 
             <button onClick={() => handleToggle("overlays")}>
-                {openPanel === "overlays" ? "Close" : "Overlays"}
+                {openPanel === "overlays" ? "Overlays" : "Overlays"}
             </button>
 
             <button onClick={() => handleToggle("filters")}>
-                {openPanel === "filters" ? "Close" : "Filters"}
+                {openPanel === "filters" ? "Filters" : "Filters"}
             </button>
 
             {/* Sidebar Content */}

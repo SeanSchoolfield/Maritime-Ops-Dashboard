@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 import { convertCartesianToDegrees } from "./coordUtils";
 
+/**
+ * ZoneSettingsUI component
+ * @param {Object} props - Component props.
+ * @param {string} props.zoneName - Name of the zone.
+ * @param {Array} props.positions - Array of positions in the zone.
+ * @param {Function} props.onSave - Callback function to save the zone settings.
+ * @param {Function} props.onDelete - Callback function to delete the zone.
+ * @param {Function} props.onRename - Callback function to rename the zone.
+ * @returns {JSX.Element} - Rendered component.
+ * @description This component displays the settings for a zone, including coordinates and options to save, delete, or rename the zone.
+ */
 const ZoneSettingsUI = ({ zoneName, positions = [], onSave, onDelete, onRename }) => {
     const [isRenaming, setIsRenaming] = useState(false);
     const [newName, setNewName] = useState(zoneName);
@@ -52,9 +63,17 @@ const ZoneSettingsUI = ({ zoneName, positions = [], onSave, onDelete, onRename }
                 <h5>Coordinates:</h5>
                 <ul>
                     {positions.map((pos, index) => {
-                        const { latitude, longitude } = convertCartesianToDegrees(pos);
+                        // console.log("Position:", pos);
+                        const { latitude, longitude } =
+                            pos.latitude !== undefined && pos.longitude !== undefined
+                                ? pos
+                                : convertCartesianToDegrees(pos);
+                        // console.log("Converted Position:", { latitude, longitude });
                         return (
-                            <li key={index}>{`Lat: ${latitude.toFixed(6)}, Lon: ${longitude.toFixed(6)}`}</li>
+                            <li key={index}>
+                                <strong>Point {index + 1}:</strong>
+                                Lat: {latitude}, Lon: {longitude}
+                            </li>
                         );
                     })}
                 </ul>
