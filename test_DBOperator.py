@@ -119,8 +119,30 @@ class TestQueries():
             'width': 23.0
         }
 
+        self.ZoneOp = DBOperator(table='zones')
+        self.EventsOp = DBOperator(table='events')
+        self.WeatherOp = DBOperator(table='meteorology')
+        self.OceanOp = DBOperator(table='oceanography')
+        self.StationsOp = DBOperator(table='sources')
+        self.VesselOp = DBOperator(table='vessels')
+        self.ArchiveOp = DBOperator(table='vessel_archive')
+
     def teardown_method(self):
         self.db.close()
+        self.ZoneOp.close()
+        self.EventsOp.close()
+        self.WeatherOp.close()
+        self.OceanOp.close()
+        self.StationsOp.close()
+        self.VesselOp.close()
+        self.ArchiveOp.close()
+
+        del self.ZoneOp
+        del self.EventsOp
+        del self.WeatherOp
+        del self.OceanOp
+        del self.StationsOp
+        del self.ArchiveOp
         del self.db
         del self.present_entity
         del self.missing_entity
@@ -183,6 +205,17 @@ class TestQueries():
         with pytest.raises(UndefinedColumn): # Might be worth catching and throwing agian?
             self.result = self.db.query([self.wrong_attr_type])
 
+    # TODO
+    def test_query_different_tables(self):
+        # zones
+        # events
+        # meteorology
+        # oceanography
+        # sources
+        # vessels
+        # zones
+        # vessel_archive
+
 @pytest.mark.delete
 class TestDeletions():
     def setup_method(self):
@@ -214,6 +247,14 @@ class TestDeletions():
         self.entity_invalid_type = { 'mmsi': '368261120' }
         self.entity_invalid_attr = { 'id': '368261120' }
 
+        self.ZoneOp = DBOperator(table='zones')
+        self.EventsOp = DBOperator(table='events')
+        self.WeatherOp = DBOperator(table='meteorology')
+        self.OceanOp = DBOperator(table='oceanography')
+        self.StationsOp = DBOperator(table='sources')
+        self.VesselOp = DBOperator(table='vessels')
+        self.ArchiveOp = DBOperator(table='vessel_archive')
+
     def teardown_method(self):
         if len(self.db.query([self.entity])) == 0:
             entity = {
@@ -240,6 +281,20 @@ class TestDeletions():
             self.db.add(entity)
             self.db.commit()
         self.db.close()
+        self.ZoneOp.close()
+        self.EventsOp.close()
+        self.WeatherOp.close()
+        self.OceanOp.close()
+        self.StationsOp.close()
+        self.VesselOp.close()
+        self.ArchiveOp.close()
+        del self.ZoneOp
+        del self.EventsOp
+        del self.WeatherOp
+        del self.OceanOp
+        del self.StationsOp
+        del self.VesselOp
+        del self.ArchiveOp
         del self.result
         del self.empty
         del self.entity
@@ -264,14 +319,24 @@ class TestDeletions():
         assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
 
     # TODO: Want this to throw an error
-    # def test_invalid_type(self):
-    #     self.db.delete(self.entity_invalid_type)
-    #     self.result = self.db.query([self.entity_invalid_type])
-    #     assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
+    def test_invalid_type(self):
+        self.db.delete(self.entity_invalid_type)
+        self.result = self.db.query([self.entity_invalid_type])
+        assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
 
     def test_invalid_attr(self):
         with pytest.raises(UndefinedColumn):
             self.db.delete(self.entity_invalid_attr)
+
+    # TODO
+    def test_del_all_tables(self):
+        # events
+        # weather
+        # ocean
+        # sources
+        # vessels
+        # vessel_archive
+        # zones
 
 @pytest.mark.add
 class TestAdditions():
@@ -417,15 +482,12 @@ class TestAdditions():
             self.db.add(self.new_entity)
 
 # TODO: How to mock my pre-existing database!
-
 @pytest.mark.modify
 class TestModification():
     def setup_method(self):
         self.db = DBOperator(table="vessels")
         self.result = None
 
-
-# TODO: Test DBOperator functions for all tables!
 
 if __name__ == "__main__":
     entity = {
@@ -451,6 +513,7 @@ if __name__ == "__main__":
     }
 
     vessels = DBOperator(table='vessels')
+
     # pprint(vessels.proximity('Point(-91.02 30.13)', 1000))
     print(len(vessels.get_table()))
     vessels.close()
