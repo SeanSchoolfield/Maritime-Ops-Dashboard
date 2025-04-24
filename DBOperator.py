@@ -571,8 +571,8 @@ if __name__ == "__main__":
     """
     Scratch work
     """
-    # operator = DBOperator(table='vessels')
-    operator = DBOperator(table='zones')
+    operator = DBOperator(table='vessels')
+    # operator = DBOperator(table='zones')
     # operator = DBOperator(table='sources')
     # operator = DBOperator(table='meteorology')
     # operator = DBOperator(table='oceanography')
