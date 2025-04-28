@@ -1,16 +1,21 @@
 from kafka import KafkaProducer
 import json
 
-producer = KafkaProducer(
-    bootstrap_servers='localhost:9092',
-    key_serializer=lambda k: k.encode('utf-8'),
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
+producer = None
 
-def send_message(key, message):
-    producer.send('maritime-events', key=key, value=message)
-    producer.flush()
+def get_kafka_producer():
+    return KafkaProducer(
+        bootstrap_servers='localhost:9092',
+        value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+        key_serializer=lambda k: k.encode('utf-8') if k else None
+    )
 
-'''if __name__ == "__main__":
-    send_message("ship1", {"status": "Arrived at port"})
-    send_message("ship2", {"status": "Departed for sea"})'''
+def send_message(topic, key, value):
+    global producer
+    if producer is None:
+        producer = get_kafka_producer()
+    try:
+        producer.send(topic, key=key, value=value)
+        producer.flush()
+    except Exception as e:
+        print(f"[Kafka Producer] Error sending message: {e}")
