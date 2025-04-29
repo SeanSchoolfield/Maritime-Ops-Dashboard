@@ -22,7 +22,7 @@ export const handleToggleDrawing = (isDrawing, setIsDrawing) => {
 
     if (newState) {
       toast.info(
-        `Click on the map to add points. Double-click to finish the polygon.`,
+        `Click on the map to add points. Right click to finish the polygon.`,
         {
           position: "bottom-right",
           autoClose: 5000,

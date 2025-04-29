@@ -83,6 +83,11 @@ export const loadEEZZonesToGlobe = async (viewer, zones) => {
         entity.polygon.outlineColor = brightPurple;
         entity.polygon.outlineWidth = 3;
 
+        // IMPORTANT: Add this to differentiate EEZ from user polygons
+        // CODE HAS BEEN CHANGFD
+        entity.properties = entity.properties || {};
+        entity.properties.isEEZ = true;
+
         // Add to the main data source
         dataSource.entities.add(entity);
       }
@@ -91,6 +96,7 @@ export const loadEEZZonesToGlobe = async (viewer, zones) => {
     // Add the data source to the viewer
     await viewer.dataSources.add(dataSource);
 
+    console.log("EEZ data source added successfully: ", dataSource);
     return dataSource;
   } catch (error) {
     console.error("Error loading EEZ zones to globe:", error);
@@ -127,6 +133,9 @@ export const toggleEEZVisibility = async (
     try {
       setVisibility(true);
       const zones = await fetchEEZZones(eezAPI);
+
+      console.log("Fetched EEZ ZONES: ", zones);
+
       await loadEEZZonesToGlobe(viewer, zones);
       toast.success("EEZ zones loaded successfully!");
     } catch (error) {
