@@ -42,13 +42,18 @@ def filter_parser(p: dict, result: list) -> None:
     # WARNING: Creates some duplicate queries when more than one attribute
     # has more than 1 value. Pretty sure its cuz my recursive restraints suck so
     # much ass. Shouldn't affect results since its a UNION query
-    x = {}
-    for k, v in p.items():
-        # Still gonna parse, even though I think it's unecessary
-        val = v if isinstance(v, list) else v.split(',')
-        while len(val) > 1:
-            q = p.copy()
-            q[k] = val.pop(0)
-            filter_parser(q,result)
-        x.update({k: val[0]})
-    result.append(x)
+    for key, val in p.items():
+            if not val:
+                continue
+            if not isinstance(val, list):
+                try:
+                    val = val.split(",")
+                except Exception:
+                    continue
+            if not val:
+                continue
+
+            if key == "ship_types":
+                result.append(f"type IN ({','.join(f'\'{v}\'' for v in val)})")
+            elif key == "flags":
+                result.append(f"flag IN ({','.join(f'\'{v}\'' for v in val)})")

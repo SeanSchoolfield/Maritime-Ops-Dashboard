@@ -7,10 +7,14 @@ scripts = [
     "backend.processors.gfw.loitering_api"
 ]
 
-while True:
-    for script in scripts:
-        print(f"\nRunning {script} ...")
-        subprocess.run([sys.executable, "-m", script])
-    
-    print("\nWaiting 300 seconds before next run...")
-    time.sleep(300)
+def main():
+    while True:
+        for script in scripts:
+            print(f"\nRunning {script} ...")
+            subprocess.run([sys.executable, "-m", script])
+
+        print("\n5 minute waiting period ... ")
+        time.sleep(300)
+
+if __name__ == "__main__":
+    main()
