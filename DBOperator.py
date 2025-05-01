@@ -19,11 +19,7 @@ class DBOperator():
     DBOperator will implicitly connect to 'capstone' database unless specified
     otherwise
     """
-    # FIXME: add() accepts WKT, but doesn't like GeoJSON
-    #   - Just threw in a couple lines to convert the geom as needed.
-    #   - Want a better fix than that^ !!!
     # WARN: Expecting fetch_filter_options() to not work with tables other than vessels
-
 
     ''' For Yolvin :) 
     def __init__(self, table: str, host='localhost', port='5432', user='postgres',
@@ -51,12 +47,12 @@ class DBOperator():
             )
             self.__cursor = self.__db.cursor()
             if table not in self.__get_tables():
-                raise RuntimeError(f"Table does not exist")
+                raise RuntimeError(f"### DBOperator Error: Table does not exist")
             print("### DBOperator: Connected to DB")
             self.permissions = self.__get_privileges()
             self.attrs = self.__get_attributes()
         except OperationalError as e:
-            print(f"### DBOperator: Error connecting to database:\n{e}")
+            print(f"### DBOperator Error: Error connecting to database:\n{e}")
             raise OperationalError
 
     ### Mutators ###
@@ -65,43 +61,37 @@ class DBOperator():
         Adds entry to connected table
         Expects a dict = {key: value} to enter as attribute and value
         Expects keys to match attrs. If attr is missing from key, ''/0/0.0 is provided.
-        Unnacceptable Missing Attrs:
-            ID reference values (vessels.mmsi, user.id, user.hash, zone.id)
-            Geometry
         """
-        # TODO: Handle multiple entities for bulk additions
-        # I might want to track relations, and organize entity values based off of it.
-        # An entity might be added by a source, but then the entity will be immediately updated. It might be worth tracking what the values are so everything is up to date as fast as possible
-        #       - Linked List? RoundRobin Queue? Hash table?
-        # IDK how I want this to handle a bulk add, but I know it will include cursor.executemany()
-        #   - Prolly have entity become entities = [dict]
-        #   - Pretty sure this will replicate for modify() and delete() too
 
-        #   i.e. JSON is provided, with all values, and data that is unkown/un-needed is given default or NULL value
+        if len(entity) == 0:
+            raise AttributeError("### DBOperator.add() Error: Attempting to add empty dictionary.")
 
         geom = None
         # If Geometry element exists, pop it to be added at the end
         if 'geom' in entity.keys():
-            geom = entity.pop('geom')
-            # print(f"Geometry: {geom}")
+            if type(entity['geom']) == type({'1':1}):
+                geom = dumps(entity.pop('geom'))
+                postgis = 'ST_GeogFromWKB(ST_GeomFromGeoJSON(%s)))'
+            else:
+                geom = entity.pop('geom')
+                postgis = 'ST_GeographyFromText(%s))'
 
         # Format keys as attributes for INSERT INTO cmd
         attrs = ','.join(entity.keys())
-        if geom != None:  # If geometry was popped, append geom key to attrs
+        # If geometry was popped, append geom key to attrs
+        if geom is not None:
             attrs += ',geom'
 
         # Define values array for pruning LATER...
         values = [value for value in entity.values()]
 
-        # Pre-formatting SQL command.
-        #   Add table, formatted attributes string, and the number of %s to add for values
         cmd = f'''
             INSERT INTO {self.table} ({attrs})
             VALUES ({'%s,' * (len(values))}'''
 
-        if geom != None:  # if geom was popped, append value to values array
+        # if geom was popped, append value to values array
+        if geom is not None:
             values += [geom]
-            # values += [dumps(geom)] # NOTE: USING to convert GeoJSON into PostGIS Geography
 
         # NOW we convert values into tuples
         values = tuple(values)
@@ -109,30 +99,40 @@ class DBOperator():
         # If geom was popped, finish off cmd string formatting append 'ST_GeomFromText()'
         #   Otherwise, just add a ')'
         if geom != None:
-            cmd += 'ST_GeographyFromText(%s))'
-            # NOTE: USING to convert GeoJSON into PostGIS Geography
-            # cmd += 'ST_GeogFromWKB(ST_GeomFromGeoJSON(%s)))'
+            cmd += postgis
         else:
             cmd = cmd[:-1] + ')'
 
         try:
             self.__cursor.execute(cmd, (values))
         except UniqueViolation as e:
-            print(f"### DBOperator ERROR: Unable to add entity: {e}")
+            print(f"### DBOperator.add() Error: Entity contains value that already exists.\n{e}")
+            self.rollback()
             raise UniqueViolation
 
-    # TODO: Finish!
+        except NotNullViolation as e:
+            print(f"### DBOperator.add() Error: Entity missing attribute.\n{e}")
+            self.rollback()
+            raise NotNullViolation
+
+        except Exception as e: # Generic exception
+            print(f"### DBOperator.add() Error: Some error occured adding entity:\n{e}")
+            self.rollback()
+            raise Exception
+
     def modify(self, entity: dict, data: dict) -> None:
         """
-        Modifys a singular exisitng entity
+        Modifies a singular exisitng entity
         """
-        # TODO: Try getting dict working for entity!
+        # NOTE: NO indication that changes are made on a nonexistent value
+        # Assumes value exists, and just modifies nothing
+
         if len(data) == 0:
             raise AttributeError(
-                "### DBOperator: Error. No data provided.")
+                "### DBOperator.modify() Error: No data provided.")
         if len(entity) == 0:
             raise AttributeError(
-                "### DBOperator: Error. Entity is empty.")
+                "### DBOperator.modify() Error: Entity is empty.")
 
         conditions = []
         changes = []
@@ -140,69 +140,99 @@ class DBOperator():
 
         # Constructing changes for 'SET' clause
         for attr, value in data.items():
+
+            # Checking if passed key exists as table attribute
+            if attr not in self.attrs.keys():
+                raise UndefinedColumn(
+                    f"### DBOperator.modify() Error: {attr} is not a valid attribute for {self.table}")
+
+            # Checking if passed value type matches expected attribute datatype
+            if type(value) not in self.attrs[attr]:
+                raise TypeError(
+                    f"### DBOperator.modify() Error: Invalid type for {attr}")
+
+            # Enabling new Geography data if position updates (for vessels)
             if attr == 'geom':
-                print(f"Geom provided: {attr}:{value}")
-                # Potentially an issue if passed GeoJSON
-                changes.append(f"{attr} = ST_GeographyFromText(%s)")
+                if type(value) == type({'1':1}): # GeoJSON
+                    changes.append(f"{attr} = ST_GeogFromWKB(ST_GeomFromGeoJSON(%s))")
+                    values.append(dumps(value))
+                else: # WKT
+                    changes.append(f"{attr} = ST_GeographyFromText(%s)")
+                    values.append(value)
             else:
                 changes.append(f"{attr} = %s")
-            values.append(value)
+                values.append(value)
 
         # Constructing conditions for 'WHERE' clause
         # since the values need to be associated with the '%s' in the WHERE
         # clause, this HAS to be last
         for attr, value in entity.items():
-            if attr == 'geom':
-                print(f"Geom provided: {attr}:{value}")
-                # Potentially an issue if passed GeoJSON
-                conditions.append(f"{attr} = ST_GeographyFromText(%s)")
-            else:
-                conditions.append(f"{attr} = %s")
+            # Checking if passed key exists as table attribute
+            if attr not in self.attrs.keys():
+                raise UndefinedColumn(
+                    f"### DBOperator.modify() Error: {attr} is not a valid attribute for {self.table}")
+
+            # Checking if passed value type matches expected attribute datatype
+            if type(value) not in self.attrs[attr]:
+                raise TypeError(
+                    f"### DBOperator.modify() Error: Invalid type for {attr}")
+
+            # Ignoring geom attributes if passed with entity. Gonna be
+            # consistent and force users to search via ST_Equals()
+            # also ignoring attributes that are None
+            if attr == 'geom' or value is None:
+                continue
+            conditions.append(f"{attr} = %s")
             values.append(value)
 
         query = f"""
             UPDATE {self.table}
-            SET {' AND '.join(changes)}
+            SET {', '.join(changes)}
             WHERE {' AND '.join(conditions)}
         """
 
-        # DEBUG
-        print(query)
-        print()
-        pprint(values)
-        input()
-
         try:
             self.__cursor.execute(query, tuple(values))
-            print("### DBOperator: Update reqeust added to queue.")
+            print("### DBOperator Update request added to queue.")
         except UndefinedColumn as e:
-            print(f"{e}\n### DBOperator: Error updating item.")
-            self.rollback()  # Uhm... Why are you necessary so other commands don't break?
+            print(f"{e}\n### DBOperator.modify() Error: Error updating item.")
+            self.rollback()
             raise UndefinedColumn
 
-    # TODO: TEST!
     def delete(self, entity: dict) -> None:
         """
         deletes entry that has matching attributes ONLY.
         ONLY deletes from connected table, tables inheriting from connected are NOT processed
-            - I'm highly tempted to have it wipe inherited entries as well, but that defeats the purpose of this object
         """
         # NOTE: NO indication that delete is called on non-existent values.
         # Assumes value exists, and just deletes nothing
 
         if len(entity) == 0:
             raise AttributeError(
-                "### DBOperator: Error. Entity is empty.")
+                "### DBOperator.delete() Error: Entity is empty.")
 
         conditions = []
         values = []
 
         for attr, value in entity.items():
-            if attr == 'geom':
-                print(f"Geom provided: {attr}:{value}")
-                conditions.append(f"{attr} = ST_GeographyFromText(%s)")
-            else:
-                conditions.append(f"{attr} = %s")
+            # Ignoring passed geom value. Gonna force users to use
+            # geometry-specific query if they wanna query/delete by geom
+            # Also ignoring value if is None
+            # Also ignoring value if is type Array (just cuz I'm lazy) (TODO)
+            if attr == 'geom' or value is None or type(value) == type([1, 2]):
+                continue
+
+            # Checking if passed key exists as table attribute
+            if attr not in self.attrs.keys():
+                raise UndefinedColumn(
+                    f"### DBOperator.delete() Error: {attr} is not a valid attribute for {self.table}")
+
+            # Checking if passed value type matches expected attribute datatype
+            if type(value) not in self.attrs[attr]:
+                raise TypeError(
+                    f"### DBOperator.delete() Error: Invalid type for {attr}")
+
+            conditions.append(f"{attr} = %s")
             values.append(value)
 
         if not conditions:
@@ -217,7 +247,7 @@ class DBOperator():
             self.__cursor.execute(query, tuple(values))
             print("### DBOperator: Deletion reqeust added to queue.")
         except UndefinedColumn as e:
-            print(f"{e}\n### DBOperator: Error deleting item.")
+            print(f"### DBOperator.delete() Error: Error deleting item:\n{e}")
             self.rollback()  # Uhm... Why are you necessary so other commands don't break?
             raise UndefinedColumn
 
@@ -277,16 +307,18 @@ class DBOperator():
 
         for key, value in {q[0]: q[1] for q in self.__cursor.fetchall()}.items():
             if value in "bigint,smallint,integer".split(','):
-                result.update({key: type(1)})
+                result.update({key: [type(1)]})
             elif value in "double precision,numeric,decimal,real".split(','):
-                result.update({key: type(1.1)})
+                result.update({key: [type(1.1)]})
             # Not sure if I wanna use type(dict) for geom attrs or keep it as string for JSON
-            elif value in "character varying,text,name,USER-DEFINED".split(','):
-                result.update({key: type("goober")})
+            elif value in "character varying,text,name".split(','):
+                result.update({key: [type("goober")]})
             elif value in "boolean".split(','):
-                result.update({key: type(True)})
+                result.update({key: [type(True)]})
             elif value in "ARRAY".split(','):
-                result.update({key: type([1, 2, 3])})
+                result.update({key: [type([1, 2, 3])]})
+            elif value in "USER-DEFINED".split(','):
+                result.update({key: [type("guh"),type({'1':1})]})
             else:
                 result.update({key: "unk"})
 
@@ -355,14 +387,26 @@ class DBOperator():
 
         if len(queries) == 0:
             raise AttributeError(
-                "### DBOperator: Cannot query an empty array...")
+                "### DBOperator.query() Error: Cannot query an empty array...")
 
         for entity in queries:
             if len(entity) == 0:
                 raise AttributeError(
-                    "### DBOperator: Cannot query an empty dictionary...")
+                    "### DBOperator.query() Error: Cannot query an empty dictionary...")
             conditions = []
             for attr, value in entity.items():
+                # Just gonna pop geom object from query.
+                # Users should call ST_Equals() to query with 'geom'
+                # Will also just ignore any attributes with value type None
+                # Also ignoring attr if is type Array, because I'm lazy (TODO)
+                if attr == 'geom' or value is None or type(value) == type([1, 2]):
+                    continue
+
+                # Checking if passed key exists as table attribute
+                if attr not in self.attrs.keys():
+                    raise UndefinedColumn(
+                        f"### DBOperator.query() Error: {attr} is not a valid attribute for {self.table}")
+
                 conditions.append(f"{attr} = %s")
                 values.append(value)
 
@@ -382,16 +426,16 @@ class DBOperator():
 
             if 'geom' in self.attrs.keys():
                 for r in results:  # quick formatting to remove binary Geom data
-                    tmp = r.pop('st_asgeojson')
+                    tmp = loads(r.pop('st_asgeojson'))
                     r['geom'] = tmp
 
             return results
         except UndefinedColumn as e:
-            print(f"### DBOperator: Error occured:\n{e}")
+            print(f"### DBOperator.query() Error: Error occured:\n{e}")
             raise UndefinedColumn
         except InFailedSqlTransaction as e:
             print(
-                f"{e}\n### DBOperator: Error executing query. Did you forget to rollback an invalid edit-like command?")
+                f"{e}\n### DBOperator.query() Error: Error executing query. Did you forget to rollback an invalid edit-like command?")
             raise InFailedSqlTransaction
 
     def get_table(self) -> list:
@@ -408,7 +452,7 @@ class DBOperator():
 
         if 'geom' in self.attrs.keys():
             for r in results:  # quick formatting to remove binary Geom data
-                tmp = r.pop('st_asgeojson')
+                tmp = loads(r.pop('st_asgeojson'))
                 r['geom'] = tmp
 
         return results
@@ -432,7 +476,7 @@ class DBOperator():
         """
         if "geom" not in self.attrs.keys():
             raise AttributeError(
-                "Cannot call GIS function on table with no 'geom' attrubute.")
+                "### DBOperator.proximity() Error: Cannot call GIS function on table with no 'geom' attrubute.")
 
         query = f"""
                 SELECT mmsi,vessel_name,callsign,heading,speed,current_status,src,type,flag,lat,lon,dist_from_shore,dist_from_port,ST_AsGeoJson(geom)
@@ -445,7 +489,7 @@ class DBOperator():
         results = [i[0] for i in self.__cursor.fetchall()]
 
         for r in results:  # quick formatting to remove binary Geom data
-            tmp = r.pop('st_asgeojson')
+            tmp = loads(r.pop('st_asgeojson'))
             r['geom'] = tmp
 
         return results
@@ -455,23 +499,25 @@ class DBOperator():
         """
         Gets entity within a (Multi) Polygon
         """
+
         if "geom" not in self.attrs.keys():
             raise AttributeError(
-                "Cannot call GIS function on table with no 'geom' attrubute.")
+                "### DBOperator.within() Error: Cannot call GIS function on table with no 'geom' attrubute.")
 
         query = f"""
                 SELECT *,ST_AsGeoJson(geom)
                 FROM {self.table}
                 WHERE ST_Within(geom::geometry, ST_GeomFromGeoJSON(%s))
+                OR ST_Crosses(geom::geometry,ST_GeomFromGeoJSON(%s))
             """
 
         self.__cursor.execute(
-            f"SELECT row_to_json(data) FROM ({query}) AS data", (dumps(var),))
+            f"SELECT row_to_json(data) FROM ({query}) AS data", (dumps(var),dumps(var)))
 
         results = [i[0] for i in self.__cursor.fetchall()]
 
         for r in results:  # quick formatting to remove binary Geom data
-            tmp = r.pop('st_asgeojson')
+            tmp = loads(r.pop('st_asgeojson'))
             r['geom'] = tmp
 
         return results
@@ -483,7 +529,7 @@ class DBOperator():
         """
         if "geom" not in self.attrs.keys():
             raise AttributeError(
-                "Cannot call GIS function on table with no 'geom' attrubute")
+                "### DBOperator.query() Error: Cannot call GIS function on table with no 'geom' attrubute")
 
         query = f"""
                 SELECT *,ST_AsGeoJson(geom)
@@ -497,7 +543,7 @@ class DBOperator():
         results = [i[0] for i in self.__cursor.fetchall()]
 
         for r in results:  # quick formatting to remove binary Geom data
-            tmp = r.pop('st_asgeojson')
+            tmp = loads(r.pop('st_asgeojson'))
             r['geom'] = tmp
 
         return results
@@ -509,7 +555,7 @@ class DBOperator():
         """
         if "geom" not in self.attrs.keys():
             raise AttributeError(
-                "Cannot call GIS function on table with no 'geom' attrubute")
+                "### DBOperator.contains() Error: Cannot call GIS function on table with no 'geom' attrubute")
 
         query = f"""
                 SELECT *,ST_AsGeoJson(geom)
@@ -523,7 +569,7 @@ class DBOperator():
         results = [i[0] for i in self.__cursor.fetchall()]
 
         for r in results:  # quick formatting to remove binary Geom data
-            tmp = r.pop('st_asgeojson')
+            tmp = loads(r.pop('st_asgeojson'))
             r['geom'] = tmp
 
         return results
@@ -534,49 +580,22 @@ class DBOperator():
         """
         if "geom" not in self.attrs.keys():
             raise AttributeError(
-                "Cannot call GIS function on table with no 'geom' attrubute")
+                "###DBOperator.meets() Error: Cannot call GIS function on table with no 'geom' attrubute")
 
         pass
 
 
 if __name__ == "__main__":
 
-
-    # pprint(operator.query([{'id':'AKC013'}]))
-    # operator.close()
-
-    # print(operator.permissions)
-    # pprint(operator.attrs)
-    # print("Table attributes:")
-    # pprint(operator.attrs.keys())
-    # print("Table attribute datatypes:")
-    # pprint(operator.attrs.values())
-
-    # Add
-    # operator.add()
-    # operator.commit()
-
-    # Modify
-    # operator.modify()
-    # operator.commit()
-
-    # Delete
-    # operator.delete()
-    # operator.commit()
-
-    # Clear
-    # operator.clear()
-    # operator.commit()
-
-    """
-    Scratch work
-    """
     operator = DBOperator(table='vessels')
     # operator = DBOperator(table='zones')
     # operator = DBOperator(table='sources')
     # operator = DBOperator(table='meteorology')
     # operator = DBOperator(table='oceanography')
     # operator = DBOperator(table='events')
+
+    # pprint(operator.query([{'mmsi':367633000}]))
+    # operator.close()
 
     # FIXME: TopologyError when trying to check zones containing some stations
     #        Following stations threwe TopologyException:
@@ -599,24 +618,20 @@ if __name__ == "__main__":
     #         print(f"Station {station['id']} threw error:\n{e}")
     #         zoneOp.rollback()
     #         input()
-
     # print(len(results))
 
-    geom = {'coordinates': [[['-83.5959', '27.9413'],
-                             ['-83.5968', '27.4006'],
-                             ['-82.9061', '27.3887'],
-                             ['-82.9911', '27.9317']]],
-            'type': 'Polygon'}
-    zones = operator.overlaps(geom)
-    operator.close()
 
-    operator = DBOperator(table='sources')
-    # Does the zone overlap known zones, and do those zones contain stations?
-    stations = []
-    for zone in zones:
-        stations.extend(operator.within(loads(zone['geom'])))
 
-    pprint(stations)
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -26,9 +26,9 @@ from pprint import pprint
 
 - functions are ubiquitous based on table
     - Can handle invalid key: values properly
-    - add() appears to work for all tables rn
-        - No restriction on required attrs. Should probably implement that
-    - delete() modify() fetch_filter_options()
+    - modify() fetch_filter_options()
+
+# TODO: TEST for stuff I want to be non-nullable and unique (set via DB)!
 
 # If we get around to impelemnting Users
 - Only accepts valid DB Users
@@ -37,7 +37,7 @@ from pprint import pprint
 - delete() fails if DELETE permissions fail
 """
 @pytest.mark.init
-class TestInit:
+class TestInit():
     def test_valid_table(self):
         db = DBOperator(table="vessels")
         assert isinstance(db, DBOperator), "instance connects to existing DB 'vessels'"
@@ -120,7 +120,7 @@ class TestQueries():
             'dist_from_shore': 0,
             'draft': 2.8,
             'flag': 'USA',
-            'geom': '{"type":"Point","coordinates":[-91,30.15]}',
+            'geom': {"type":"Point","coordinates":[-91,30.15]},
             'heading': 356.3,
             'lat': 30.15,
             'length': 137,
@@ -141,31 +141,33 @@ class TestQueries():
         self.OceanOp = DBOperator(table='oceanography')
         self.StationsOp = DBOperator(table='sources')
         self.VesselOp = DBOperator(table='vessels')
-        self.ArchiveOp = DBOperator(table='vessel_archive')
 
         self.existing_zone = {
-            'geom': '{"type":"polygon","coordinates":[[[-93.4067001,43.8486137],[-93.4045944,43.848114],[-93.0588989,43.8484115],[-93.049797,43.848011],[-93.0494003,43.7609138],[-93.0494995,43.7501106],[-93.04 92935,43.7312126],[-93.0494995,43.6012115],[-93.0492935,43.5794105],[-93.0494995,43.5554122],[-93.0 492935,43.5333137],[-93.0490951,43.5287132],[-93.0492935,43.4997138],[-93.0592956,43.4995117],[-93.2473983,43.4995117],[-93.2672958,43.4993133],[-93.3586959,43.4995117],[-93.4824981,43.4995117],[-93.4925003,43.4994125],[-93.4976959,43.4991111],[-93.5011978,43.4995117],[-93.6368942,43.4995117],[-93.6485977,43.499813],[-93.6483993,43.5542106],[-93.6483993,43.6301116],[-93.6485977,43.6445121],[-93.6483993,43.6736106],[-93.6485977,43.6883125],[-93.6485977,43.7316131],[-93.6483001,43.7752113],[-93.6483993,43.8265113],[-93.6481933,43.8406105],[-93.648796,43.848011],[-93.6245956,43.8482131],[-93.5873947,43.848011],[-93.4678955,43.848114],[-93.4269943,43.848011],[-93.4089965,43.848114],[-93.4067001,43.8486137]]]}',
-            'id': 'mnz093',
-            'name': 'freeborn',
-            'region': 'usa-mn',
-            'src_id': 'mpx',
-            'type': 'fire'
+            'geom': {"type": "polygon",
+                     "coordinates": [[
+                     [-93.4067001,43.8486137], [-93.4045944,43.848114], [-93.0588989,43.8484115], [-93.049797,43.848011], [-93.0494003,43.7609138], [-93.0494995,43.7501106], [-93.0492935,43.7312126], [-93.0494995,43.6012115], [-93.0492935,43.5794105], [-93.0494995,43.5554122], [-93.0492935,43.5333137], [-93.0490951,43.5287132],[-93.0492935,43.4997138],[-93.0592956,43.4995117],[-93.2473983,43.4995117],[-93.2672958,43.4993133],[-93.3586959,43.4995117],[-93.4824981,43.4995117],[-93.4925003,43.4994125],[-93.4976959,43.4991111],[-93.5011978,43.4995117],[-93.6368942,43.4995117],[-93.6485977,43.499813],[-93.6483993,43.5542106],[-93.6483993,43.6301116],[-93.6485977,43.6445121],[-93.6483993,43.6736106],[-93.6485977,43.6883125],[-93.6485977,43.7316131],[-93.6483001,43.7752113],[-93.6483993,43.8265113],[-93.6481933,43.8406105],[-93.648796,43.848011],[-93.6245956,43.8482131],[-93.5873947,43.848011],[-93.4678955,43.848114],[-93.4269943,43.848011],[-93.4089965,43.848114],[-93.4067001,43.8486137]
+                     ]] },
+            'id': 'MNZ093',
+            'name': 'Freeborn',
+            'region': 'USA-MN',
+            'src_id': 'MPX',
+            'type': 'FIRE'
         }
         self.existing_event = {
             'active': True,
-            'description': 'this station is currently in <a '
+            'description': 'This station is currently in <a '
                 "href='http://tidesandcurrents.noaa.gov/waterconditions.html#high'>high "
                 'water condition</a>.',
-            'effective': '2025-04-15t18:54:00',
-            'end_time': '2025-04-15t19:54:00',
-            'expires': '2025-04-15t19:54:00',
-            'headline': 'high water condition',
+            'effective': '2025-04-15T18:54:00',
+            'end_time': '2025-04-15T19:54:00',
+            'expires': '2025-04-15T19:54:00',
+            'headline': 'High Water Condition',
             'id': 1,
-            'instructions': 'none',
+            'instructions': 'None',
             'severity': 'low',
             'src_id': '1820000',
-            'timestamp': '2025-04-15t18:54:00',
-            'type': 'marine alert',
+            'timestamp': '2025-04-15T18:54:00',
+            'type': 'Marine alert',
             'urgency': 'low'
         }
         self.existing_weather = {
@@ -176,7 +178,7 @@ class TestQueries():
             'id': 1,
             'precipitation': None,
             'src_id': '1611400',
-            'timestamp': '2025-04-15t17:54:21',
+            'timestamp': '2025-04-15T17:54:21',
             'visibility': None,
             'wind_heading': 82,
             'wind_speed': 10.69
@@ -187,7 +189,7 @@ class TestQueries():
             'id': 1,
             'salinity': None,
             'src_id': '1611400',
-            'timestamp': '2025-04-15t18:57:45',
+            'timestamp': '2025-04-15T18:57:45',
             'water_level': 3.76,
             'water_physics': None,
             'water_temperature': 81.1,
@@ -201,12 +203,12 @@ class TestQueries():
                        'water_level',
                        'one_minute_water_level',
                        'predictions'],
-            'geom': '{"type":"point","coordinates":[-159.3561,21.9544]}',
+            'geom': {"type":"point","coordinates":[-159.3561,21.9544]},
             'id': '1611400',
-            'name': 'nawiliwili',
-            'region': 'usa',
-            'timezone': 'hast (gmt -10)',
-            'type': 'noaa-coop'
+            'name': 'Nawiliwili',
+            'region': 'USA',
+            'timezone': 'HAST (GMT -10)',
+            'type': 'NOAA-COOP'
         }
 
     def teardown_method(self):
@@ -217,14 +219,12 @@ class TestQueries():
         self.OceanOp.close()
         self.StationsOp.close()
         self.VesselOp.close()
-        self.ArchiveOp.close()
 
         del self.ZoneOp
         del self.EventsOp
         del self.WeatherOp
         del self.OceanOp
         del self.StationsOp
-        del self.ArchiveOp
         del self.db
         del self.present_entity
         del self.missing_entity
@@ -256,7 +256,6 @@ class TestQueries():
         with pytest.raises(AttributeError):
             self.result = self.db.query([{}])
 
-    # FIXME: Cannot handle GeoJSON
     def test_absolute_query(self):
         self.result = self.db.query([self.existing_entity])
         assert len(self.result) == 1, "Should only query 1 entity"
@@ -293,13 +292,8 @@ class TestQueries():
         with pytest.raises(UndefinedColumn): # Might be worth catching and throwing agian?
             self.result = self.db.query([self.wrong_attr_type])
 
-    # TODO
-    # FIXME: Cannot handle GeoJSON
     def test_query_different_tables(self):
-        '''
-        Make sure that queries can be singular/multi
-        keys are valid and the correspnding datatype is also valid
-        '''
+        # testing valid entires
         result = self.ZoneOp.query([self.existing_zone])
         assert len(result) == 1
         result = self.EventsOp.query([self.existing_event])
@@ -311,6 +305,14 @@ class TestQueries():
         result = self.StationsOp.query([self.existing_station])
         assert len(result) == 1
 
+        # Now testing wrong attr/type for different tables
+        with pytest.raises(UndefinedColumn): # Might be worth catching and throwing agian?
+            result = self.ZoneOp.query([self.existing_zone])
+            result = self.EventsOp.query([self.existing_weather])
+            result = self.WeatherOp.query([self.existing_ocean])
+            result = self.OceanOp.query([self.existing_station])
+            result = self.StationsOp.query([self.existing_zone])
+
 @pytest.mark.delete
 class TestDeletions():
     def setup_method(self):
@@ -319,43 +321,116 @@ class TestDeletions():
         self.empty = {}
         self.ship = { 'mmsi': 368261120 }
         self.entity_many_attrs = {
-                'callsign': 'WDN2333',
-                'cargo_weight': 65.0,
-                'current_status': '0',
-                'dist_from_port': 0.0,
-                'dist_from_shore': 0.0,
-                'draft': 2.8,
-                'flag': 'USA',
-                'geom': 'Point(-91.0 30.15)',
-                'heading': 356.3,
-                'lat': 30.15,
-                'length': 137.0,
-                'lon': -91.0,
-                'mmsi': 368261120,
-                'speed': 7.6,
-                'src': 'MarineCadastre-AIS',
-                'timestamp': '2024-09-30T00:00:01',
-                'type': 'PASSENGER',
-                'vessel_name': 'VIKING MISSISSIPPI',
-                'width': 23.0
-            }
+            'callsign': 'WDN2333',
+            'cargo_weight': 65.0,
+            'cog': None,
+            'current_status': 'UNDERWAY',
+            'dist_from_port': 0.0,
+            'dist_from_shore': 0.0,
+            'draft': 2.8,
+            'flag': 'USA',
+            'geom': {"type":"Point","coordinates":[-91,30.15]},
+            'heading': 356.3,
+            'lat': 30.15,
+            'length': 137.0,
+            'lon': -91.0,
+            'mmsi': 368261120,
+            'predicted_path': None,
+            'speed': 7.6,
+            'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:01',
+            'type': 'PASSENGER',
+            'vessel_name': 'VIKING MISSISSIPPI',
+            'width': 23.0
+        }
         self.entity_invalid_type = { 'mmsi': '368261120' }
         self.entity_invalid_attr = { 'id': '368261120' }
 
+        self.zone = {
+            'geom': {"type": "polygon",
+                     "coordinates": [[
+                     [-93.4067001,43.8486137], [-93.4045944,43.848114], [-93.0588989,43.8484115], [-93.049797,43.848011], [-93.0494003,43.7609138], [-93.0494995,43.7501106], [-93.0492935,43.7312126], [-93.0494995,43.6012115], [-93.0492935,43.5794105], [-93.0494995,43.5554122], [-93.0492935,43.5333137], [-93.0490951,43.5287132],[-93.0492935,43.4997138],[-93.0592956,43.4995117],[-93.2473983,43.4995117],[-93.2672958,43.4993133],[-93.3586959,43.4995117],[-93.4824981,43.4995117],[-93.4925003,43.4994125],[-93.4976959,43.4991111],[-93.5011978,43.4995117],[-93.6368942,43.4995117],[-93.6485977,43.499813],[-93.6483993,43.5542106],[-93.6483993,43.6301116],[-93.6485977,43.6445121],[-93.6483993,43.6736106],[-93.6485977,43.6883125],[-93.6485977,43.7316131],[-93.6483001,43.7752113],[-93.6483993,43.8265113],[-93.6481933,43.8406105],[-93.648796,43.848011],[-93.6245956,43.8482131],[-93.5873947,43.848011],[-93.4678955,43.848114],[-93.4269943,43.848011],[-93.4089965,43.848114],[-93.4067001,43.8486137]
+                     ]] },
+            'id': 'MNZ093',
+            'name': 'Freeborn',
+            'region': 'USA-MN',
+            'src_id': 'MPX',
+            'type': 'FIRE'
+        }
+
+        self.event = {
+            'active': True,
+            'description': 'This station is currently in <a '
+                "href='http://tidesandcurrents.noaa.gov/waterconditions.html#high'>high "
+                'water condition</a>.',
+            'effective': '2025-04-15T18:54:00',
+            'end_time': '2025-04-15T19:54:00',
+            'expires': '2025-04-15T19:54:00',
+            'headline': 'High Water Condition',
+            'id': 1,
+            'instructions': 'None',
+            'severity': 'low',
+            'src_id': '1820000',
+            'timestamp': '2025-04-15T18:54:00',
+            'type': 'Marine alert',
+            'urgency': 'low'
+        }
+
+        self.weather_report = {
+            'air_temperature': 76.3,
+            'event_id': None,
+            'forecast': None,
+            'humidity': None,
+            'id': 1,
+            'precipitation': None,
+            'src_id': '1611400',
+            'timestamp': '2025-04-15T17:54:21',
+            'visibility': None,
+            'wind_heading': 82.0,
+            'wind_speed': 10.69
+        }
+
+        self.ocean_report = {
+            'conductivity': None,
+            'event_id': None,
+            'id': 1,
+            'salinity': None,
+            'src_id': '1611400',
+            'timestamp': '2025-04-15T18:57:45',
+            'water_level': 3.76,
+            'water_physics': None,
+            'water_temperature': 81.1,
+            'wave_height': None
+        }
+
+        self.station = {
+            'datums': ['air_temperature',
+                       'wind',
+                       'water_temperature',
+                       'air_pressure',
+                       'water_level',
+                       'one_minute_water_level',
+                       'predictions'],
+            'geom': {"type":"point","coordinates":[-159.3561,21.9544]},
+            'id': '1611400',
+            'name': 'Nawiliwili',
+            'region': 'USA',
+            'timezone': 'HAST (GMT -10)',
+            'type': 'NOAA-COOP'
+        }
+
         self.ZoneOp = DBOperator(table='zones')
-        self.EventsOp = DBOperator(table='events')
+        self.EventOp = DBOperator(table='events')
         self.WeatherOp = DBOperator(table='meteorology')
         self.OceanOp = DBOperator(table='oceanography')
-        self.StationsOp = DBOperator(table='sources')
-        self.VesselOp = DBOperator(table='vessels')
-        self.ArchiveOp = DBOperator(table='vessel_archive')
+        self.StationOp = DBOperator(table='sources')
 
     def teardown_method(self):
         if len(self.db.query([self.ship])) == 0:
             ship = {
                 'callsign': 'WDN2333',
                 'cargo_weight': 65.0,
-                'current_status': '0',
+                'current_status': 'UNDERWAY',
                 'dist_from_port': 0.0,
                 'dist_from_shore': 0.0,
                 'draft': 2.8,
@@ -376,26 +451,48 @@ class TestDeletions():
             self.db.add(ship)
             self.db.commit()
         self.db.close()
+
+        if len(self.ZoneOp.query([self.zone])) == 0:
+            self.ZoneOp.add(self.zone)
+            self.ZoneOp.commit()
         self.ZoneOp.close()
-        self.EventsOp.close()
+
+        if len(self.EventOp.query([self.event])) == 0:
+            self.EventOp.add(self.event)
+            self.EventOp.commit()
+        self.EventOp.close()
+
+        if len(self.WeatherOp.query([self.weather_report])) == 0:
+            self.WeatherOp.add(self.weather_report)
+            self.WeatherOp.commit()
         self.WeatherOp.close()
+
+        if len(self.OceanOp.query([self.ocean_report])) == 0:
+            self.OceanOp.add(self.ocean_report)
+            self.OceanOp.commit()
         self.OceanOp.close()
-        self.StationsOp.close()
-        self.VesselOp.close()
-        self.ArchiveOp.close()
+
+        if len(self.StationOp.query([self.station])) == 0:
+            self.StationOp.add(self.station)
+            self.StationOp.commit()
+        self.StationOp.close()
+
         del self.ZoneOp
-        del self.EventsOp
+        del self.EventOp
         del self.WeatherOp
         del self.OceanOp
-        del self.StationsOp
-        del self.VesselOp
-        del self.ArchiveOp
+        del self.StationOp
         del self.result
         del self.empty
         del self.ship
         del self.entity_many_attrs
         del self.entity_invalid_type
         del self.entity_invalid_attr
+        del self.zone
+        del self.event
+        del self.weather_report
+        del self.ocean_report
+        del self.station
 
     def test_delete_nothing(self):
         with pytest.raises(AttributeError):
@@ -413,52 +510,74 @@ class TestDeletions():
         self.result = self.db.query([self.entity_many_attrs])
         assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
 
-    # TODO: Want this to throw an error
     def test_invalid_type(self):
-        self.db.delete(self.entity_invalid_type)
-        self.result = self.db.query([self.entity_invalid_type])
-        assert len(self.result) == 0, "Query off mmsi shouldn't pull anything"
+        with pytest.raises(TypeError):
+            self.db.delete(self.entity_invalid_type)
 
     def test_invalid_attr(self):
         with pytest.raises(UndefinedColumn):
             self.db.delete(self.entity_invalid_attr)
 
-    # TODO
     def test_del_all_tables(self):
         # events valid entity
-        # events invalid entity
+        self.EventOp.delete(self.event)
+        self.EventOp.commit()
+        self.result = self.EventOp.query([self.event])
+        assert len(self.result) == 0, "Query shouldn't pull anything"
+
         # weather valid entity
-        # weather invalid entity
+        self.WeatherOp.delete(self.weather_report)
+        self.WeatherOp.commit()
+        self.result = self.WeatherOp.query([self.weather_report])
+        assert len(self.result) == 0, "Query shouldn't pull anything"
+
         # ocean valid entity
-        # ocean invalid entity
+        self.OceanOp.delete(self.ocean_report)
+        self.OceanOp.commit()
+        self.result = self.OceanOp.query([self.ocean_report])
+        assert len(self.result) == 0, "Query shouldn't pull anything"
+
         # sources valid entity
-        # sources invalid entity
-        # vessel_archive valid entity
-        # vessel_archive invalid entity
+        self.StationOp.delete(self.station)
+        self.StationOp.commit()
+        self.result = self.StationOp.query([self.station])
+        assert len(self.result) == 0, "Query shouldn't pull anything"
+
         # zones valid entity
-        # zones invalid entity
-        pass
+        self.ZoneOp.delete(self.zone)
+        self.ZoneOp.commit()
+        self.result = self.ZoneOp.query([self.zone])
+        assert len(self.result) == 0, "Query shouldn't pull anything"
+
+        # Each one of these should throw some sort of exception
+        with pytest.raises(Exception):
+            self.EventOp.delete(self.zone)
+            self.WeatherOp.delete(self.station)
+            self.OceanOp.delete(self.event)
+            self.StationOp.delete(self.weather_report)
+            self.ZoneOp.delete(self.ocean_report)
 
 @pytest.mark.add
 class TestAdditions():
     def setup_method(self):
         self.db = DBOperator(table="vessels")
         self.result = None
-        self.empty_entity = {}
-        self.existing_ship = {
+        self.existing_entity = {
             'callsign': 'WDN2333',
             'cargo_weight': 65.0,
-            'current_status': '0',
+            'cog': None,
+            'current_status': 'UNDERWAY',
             'dist_from_port': 0.0,
             'dist_from_shore': 0.0,
             'draft': 2.8,
             'flag': 'USA',
-            'geom': 'Point(-91.0 30.15)',
+            'geom': {"type":"Point","coordinates":[-91,30.15]},
             'heading': 356.3,
             'lat': 30.15,
             'length': 137.0,
             'lon': -91.0,
             'mmsi': 368261120,
+            'predicted_path': None,
             'speed': 7.6,
             'src': 'MarineCadastre-AIS',
             'timestamp': '2024-09-30T00:00:01',
@@ -467,107 +586,486 @@ class TestAdditions():
             'width': 23.0
         }
 
-        self.new_ship = {}
-
-        self.ship_with_invalid_types = {
-            'mmsi': '367702270',
-            'vessel_name': 'MS. JENIFER TRETTER',
-            'callsign': 'WDI4813',
-            'timestamp': '2024-09-30T00:00:00',
-            'heading': '334.5',
-            'speed': 6.6,
-            'current_status' : 12,
-            'src': 'MarineCadastre-AIS',
-            'type': 'TUG',
-            'type': 'USA',
-            'length': 113.0,
-            'width': 34.0,
-            'draft': 3.1,
-            'cargo_weight': 56.0,
-            'lat': 26.1,
-            'lon': -97.21,
-            'dist_from_shore': 0.0,
+        self.new_entity = {
+            'callsign': 'WBH6425',
+            'cargo_weight': 57.0,
+            'current_status': "UNKNOWN",
             'dist_from_port': 0.0,
-            'geom': 'Point(-97.21 26.1)'
+            'dist_from_shore': 0.0,
+            'draft': 6.3,
+            'flag': 'USA',
+            'geom': 'Point(-74.11 40.65)',
+            'heading': 258.9,
+            'lat': 40.65,
+            'length': 120.0,
+            'lon': -74.11,
+            'mmsi': 368504000,
+            'speed': 4.1,
+            'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:00',
+            'type': 'TUG',
+            'vessel_name': 'CAPTAIN DANN',
+            'width': 18.0
         }
 
-        self.ship_missing_geom = {
-            'mmsi': 367702270,
-            'vessel_name': 'MS. JENIFER TRETTER',
-            'callsign': 'WDI4813',
-            'timestamp': '2024-09-30T00:00:00',
-            'heading': 334.5,
-            'speed': 6.6,
-            'current_status' : 12,
-            'src': 'MarineCadastre-AIS',
-            'type': 'TUG',
-            'type': 'USA',
-            'length': 113.0,
-            'width': 34.0,
-            'draft': 3.1,
-            'cargo_weight': 56.0,
-            'lat': 26.1,
-            'lon': -97.21,
-            'dist_from_shore': 0.0,
+        self.entity_geomJSON = {
+            'callsign': 'WBH6425',
+            'cargo_weight': 57.0,
+            'current_status': "UNKNOWN",
             'dist_from_port': 0.0,
-        }
-
-        self.ship_missing_attrs = {
-            'mmsi': 367702270,
-            'vessel_name': 'MS. JENIFER TRETTER',
-            'callsign': 'WDI4813',
-            'timestamp': '2024-09-30T00:00:00',
-            'speed': 6.6,
-            'current_status' : 12,
-            'type': 'USA',
-            'length': 113.0,
-            'draft': 3.1,
-            'lat': 26.1,
             'dist_from_shore': 0.0,
-            'dist_from_port': 0.0
-        }
-
-        self.ship_missing_mmsi = {
-            'vessel_name': 'MS. JENIFER TRETTER',
-            'callsign': 'WDI4813',
-            'timestamp': '2024-09-30T00:00:00',
-            'heading': 334.5,
-            'speed': 6.6,
-            'current_status': 12,
+            'draft': 6.3,
+            'flag': 'USA',
+            'geom': {
+                'coordinates': [-74.11, 40.65],
+                'type': 'Point'},
+            'heading': 258.9,
+            'lat': 40.65,
+            'length': 120.0,
+            'lon': -74.11,
+            'mmsi': 368504000,
+            'speed': 4.1,
             'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:00',
             'type': 'TUG',
-            'type': 'USA',
-            'length': 113.0,
-            'width': 34.0,
-            'draft': 3.1,
-            'cargo_weight': 56.0,
-            'lat': 26.1,
-            'lon': -97.21,
-            'dist_from_shore': 0.0,
-            'dist_from_port': 0.0
+            'vessel_name': 'CAPTAIN DANN',
+            'width': 18.0
         }
+
+        self.entity_with_invalid_types = {
+            'callsign': 'WBH6425',
+            'cargo_weight': 57,
+            'current_status': 15.0,
+            'dist_from_port': 0.0,
+            'dist_from_shore': 0.0,
+            'draft': 6.3,
+            'flag': 'USA',
+            'geom': {
+                'coordinates': [-74.11, 40.65],
+                'type': 'Point'},
+            'heading': '258.9',
+            'lat': '40.65',
+            'length': '120.0',
+            'lon': '-74.11',
+            'mmsi': '368504000',
+            'speed': '4.1',
+            'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:00',
+            'type': 'TUG',
+            'vessel_name': 123,
+            'width': 18
+        }
+
+        self.entity_missing_geom = {
+            'callsign': 'WBH6425',
+            'current_status': "UNKNOWN",
+            'cargo_weight': 57.0,
+            'dist_from_port': 0.0,
+            'dist_from_shore': 0.0,
+            'draft': 6.3,
+            'flag': 'USA',
+            'heading': 258.9,
+            'lat': 40.65,
+            'length': 120.0,
+            'lon': -74.11,
+            'mmsi': 368504000,
+            'speed': 4.1,
+            'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:00',
+            'type': 'TUG',
+            'vessel_name': 'CAPTAIN DANN',
+            'width': 18.0
+        }
+
+        self.entity_missing_attrs = {
+            'cargo_weight': 57.0,
+            'dist_from_port': 0.0,
+            'dist_from_shore': 0.0,
+            'draft': 6.3,
+            'geom': {
+                'coordinates': [-74.11, 40.65],
+                'type': 'Point'},
+            'heading': 258.9,
+            'lat': 40.65,
+            'length': 120.0,
+            'lon': -74.11,
+            'mmsi': 368504000,
+            'speed': 4.1,
+            'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:00',
+        }
+
+        self.entity_missing_mmsi = {
+            'callsign': 'WBH6425',
+            'cargo_weight': 57.0,
+            'current_status': "UNKNOWN",
+            'dist_from_port': 0.0,
+            'dist_from_shore': 0.0,
+            'draft': 6.3,
+            'flag': 'USA',
+            'geom': 'Point(-74.11 40.65)',
+            'heading': 258.9,
+            'lat': 40.65,
+            'length': 120.0,
+            'lon': -74.11,
+            'speed': 4.1,
+            'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:00',
+            'type': 'TUG',
+            'vessel_name': 'CAPTAIN DANN',
+            'width': 18.0
+        }
+
+        self.zone = {
+            'geom': {"type": "polygon",
+                     "coordinates": [[
+                     [-93.4067001,43.8486137], [-93.4045944,43.848114], [-93.0588989,43.8484115], [-93.049797,43.848011], [-93.0494003,43.7609138], [-93.0494995,43.7501106], [-93.0492935,43.7312126], [-93.0494995,43.6012115], [-93.0492935,43.5794105], [-93.0494995,43.5554122], [-93.0492935,43.5333137], [-93.0490951,43.5287132],[-93.0492935,43.4997138],[-93.0592956,43.4995117],[-93.2473983,43.4995117],[-93.2672958,43.4993133],[-93.3586959,43.4995117],[-93.4824981,43.4995117],[-93.4925003,43.4994125],[-93.4976959,43.4991111],[-93.5011978,43.4995117],[-93.6368942,43.4995117],[-93.6485977,43.499813],[-93.6483993,43.5542106],[-93.6483993,43.6301116],[-93.6485977,43.6445121],[-93.6483993,43.6736106],[-93.6485977,43.6883125],[-93.6485977,43.7316131],[-93.6483001,43.7752113],[-93.6483993,43.8265113],[-93.6481933,43.8406105],[-93.648796,43.848011],[-93.6245956,43.8482131],[-93.5873947,43.848011],[-93.4678955,43.848114],[-93.4269943,43.848011],[-93.4089965,43.848114],[-93.4067001,43.8486137]
+                     ]] },
+            'id': 'MNZ093',
+            'name': 'Freeborn',
+            'region': 'USA-MN',
+            'src_id': 'MPX',
+            'type': 'FIRE'
+        }
+
+        self.event = {
+            'active': True,
+            'description': 'This station is currently in <a '
+                "href='http://tidesandcurrents.noaa.gov/waterconditions.html#high'>high "
+                'water condition</a>.',
+            'effective': '2025-04-15T18:54:00',
+            'end_time': '2025-04-15T19:54:00',
+            'expires': '2025-04-15T19:54:00',
+            'headline': 'High Water Condition',
+            'id': 1,
+            'instructions': 'None',
+            'severity': 'low',
+            'src_id': '1820000',
+            'timestamp': '2025-04-15T18:54:00',
+            'type': 'Marine alert',
+            'urgency': 'low'
+        }
+
+        self.weather_report = {
+            'air_temperature': 76.3,
+            'event_id': None,
+            'forecast': None,
+            'humidity': None,
+            'id': 1,
+            'precipitation': None,
+            'src_id': '1611400',
+            'timestamp': '2025-04-15T17:54:21',
+            'visibility': None,
+            'wind_heading': 82.0,
+            'wind_speed': 10.69
+        }
+
+        self.ocean_report = {
+            'conductivity': None,
+            'event_id': None,
+            'id': 1,
+            'salinity': None,
+            'src_id': '1611400',
+            'timestamp': '2025-04-15T18:57:45',
+            'water_level': 3.76,
+            'water_physics': None,
+            'water_temperature': 81.1,
+            'wave_height': None
+        }
+
+        self.station = {
+            'datums': ['air_temperature',
+                       'wind',
+                       'water_temperature',
+                       'air_pressure',
+                       'water_level',
+                       'one_minute_water_level',
+                       'predictions'],
+            'geom': {"type":"point","coordinates":[-159.3561,21.9544]},
+            'id': '1611400',
+            'name': 'Nawiliwili',
+            'region': 'USA',
+            'timezone': 'HAST (GMT -10)',
+            'type': 'NOAA-COOP'
+        }
+
+        self.ZoneOp = DBOperator(table='zones')
+        self.EventOp = DBOperator(table='events')
+        self.WeatherOp = DBOperator(table='meteorology')
+        self.OceanOp = DBOperator(table='oceanography')
+        self.StationOp = DBOperator(table='sources')
 
     def teardown_method(self):
-        self.db.rollback()
+        if len(self.db.query([{'mmsi': 368504000}])) == 1:
+            # Should account for all permutations of new_entity
+            self.db.delete({'mmsi': 368504000})
+            self.db.commit()
         self.db.close()
+
+        if len(self.ZoneOp.query([self.zone])) == 1:
+            self.ZoneOp.delete(self.zone)
+            self.ZoneOp.commit()
+        self.ZoneOp.close()
+
+        if len(self.EventOp.query([self.event])) == 1:
+            self.EventOp.delete(self.event)
+            self.EventOp.commit()
+        self.EventOp.close()
+
+        if len(self.WeatherOp.query([self.weather_report])) == 1:
+            self.WeatherOp.delete(self.weather_report)
+            self.WeatherOp.commit()
+        self.WeatherOp.close()
+
+        if len(self.OceanOp.query([self.ocean_report])) == 1:
+            self.OceanOp.delete(self.ocean_report)
+            self.OceanOp.commit()
+        self.OceanOp.close()
+
+        if len(self.StationOp.query([self.station])) == 1:
+            self.StationOp.delete(self.station)
+            self.StationOp.commit()
+        self.StationOp.close()
+
+        del self.ZoneOp
+        del self.EventOp
+        del self.WeatherOp
+        del self.OceanOp
+        del self.StationOp
+
         del self.db
         del self.result
-        del self.empty_entity
-        del self.existing_ship
-        del self.new_ship
-        del self.ship_missing_geom
-        del self.ship_missing_attrs
-        del self.ship_missing_mmsi
+        del self.existing_entity
+        del self.new_entity
+        del self.entity_geomJSON
+        del self.entity_missing_geom
+        del self.entity_missing_attrs
+        del self.entity_missing_mmsi
+        del self.entity_with_invalid_types
+        del self.zone
+        del self.event
+        del self.weather_report
+        del self.ocean_report
+        del self.station
 
     def test_add(self):
+        # Should go all hunky-dory
         self.db.add(self.new_entity)
+        self.db.commit()
+        result = self.db.query([self.new_entity])
+        assert len(result) == 1, "Entry should now exist within DB"
 
-# TODO: How to mock my pre-existing database!
+    def test_add_Geom_As_JSON(self):
+        self.db.add(self.entity_geomJSON)
+        self.db.commit()
+        result = self.db.query([self.entity_geomJSON])
+        assert len(result) == 1, "Entry should now exist within DB"
+
+    def test_empty_add(self):
+        # Raise some AttributeError
+        with pytest.raises(AttributeError):
+            self.db.add({})
+
+    def test_add_non_dict(self):
+        with pytest.raises(AttributeError):
+            self.db.add([1,2,3,4,5])
+
+    def test_conflicting_add(self):
+        # Expecting to throw some pyscopg2 unique violation error
+        with pytest.raises(UniqueViolation):
+            self.db.add(self.existing_entity)
+
+    # TODO: Test with other tables
+    def test_add_missing_attrs(self):
+        # Should work, but with missing attrs being None
+        self.db.add(self.entity_missing_attrs)
+        self.db.commit()
+        # Missing: Weight, callsign, current status, flag, type, vessel_name
+        result = self.db.query([self.entity_missing_attrs])[0]
+        assert result['width'] == 0.0
+        assert result['callsign'] == "NONE"
+        assert result['current_status'] == "UNKNOWN"
+        assert result['flag'] == "OTHER"
+        assert result['type'] == "OTHER"
+        assert result['vessel_name'] == "UNKNOWN"
+
+    # TODO: Test with other tables
+    def test_add_missing_necessary_attrs(self):
+        # Should throw some psycopg2 error about a non-nullable value
+        with pytest.raises(NotNullViolation):
+            self.db.add(self.entity_missing_geom)
+            self.db.add(self.entity_missing_mmsi)
+
+    def test_add_invalid_attr(self):
+        with pytest.raises(AttributeError):
+            self.db.add(self.entity_wrong_attr)
+
+    def test_add_invalid_type(self):
+        with pytest.raises(AttributeError):
+            self.db.add(self.entity_invalid_type)
+
+    def test_add_all_tables(self):
+        # Valid entires
+        self.ZoneOp.add(self.zone)
+        self.ZoneOp.rollback()
+        self.EventOp.add(self.event)
+        self.EventOp.rollback()
+        self.WeatherOp.add(self.weather_report)
+        self.WeatherOp.rollback()
+        self.OceanOp.add(self.ocean_report)
+        self.OceanOp.rollback()
+        self.StationOp.add(self.station)
+        self.StationOp.rollback()
+
+        # Should throw some kind of error
+        with pytest.raises(Exception):
+            self.ZoneOp.add(self.event)
+            self.EventOp.add(self.weather_report)
+            self.WeatherOp.add(self.station)
+            self.OceanOp.add(self.zone)
+            self.StationOp.add(self.ocean_report)
+
 @pytest.mark.modify
 class TestModification():
     def setup_method(self):
         self.db = DBOperator(table="vessels")
         self.result = None
+
+        self.id = {'mmsi': 367633000}
+
+        self.entity = {
+            'callsign': 'WLSY',
+            'cog': None,
+            'current_status': 'UNDERWAY',
+            'dist_from_port': 0.0,
+            'dist_from_shore': 0.0,
+            'draft': 11.2,
+            'flag': 'USA',
+            'geom': {'coordinates': [-82.88, 24.18], 'type': 'Point'},
+            'heading': 88.8,
+            'lat': 24.18,
+            'length': 186.0,
+            'lon': -82.88,
+            'mmsi': 367633000,
+            'predicted_path': None,
+            'speed': 11.7,
+            'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:00',
+            'type': 'TANKER',
+            'vessel_name': 'LONESTAR STATE',
+            'width': 32.0
+        }
+
+        self.non_existent_entity = {
+            'callsign': 'WBH6425',
+            'cargo_weight': 57.0,
+            'current_status': 'UNKNOWN',
+            'dist_from_port': 0.0,
+            'dist_from_shore': 0.0,
+            'draft': 6.3,
+            'flag': 'USA',
+            'geom': 'Point(-74.11 40.65)',
+            'heading': 258.9,
+            'lat': 40.65,
+            'length': 120.0,
+            'lon': -74.11,
+            'mmsi': 368504000,
+            'speed': 4.1,
+            'src': 'MarineCadastre-AIS',
+            'timestamp': '2024-09-30T00:00:00',
+            'type': 'TUG',
+            'vessel_name': 'CAPTAIN DANN',
+            'width': 18.0
+        }
+
+        self.non_existent_id = {'mmsi': 368504000}
+
+        self.change = {'current_status': "LIMITED MOVEMENT"}
+
+        self.changes = {
+            'lat': 24.2489,
+            'lon': -82.0407,
+            'geom': 'Point(-82.0407 24.2489)',
+        }
+
+        self.changes_invalid_attr = {'guh': 'GUH!'}
+
+        self.changes_invalid_type = {'current_status': 15.0}
+
+    def teardown_method(self):
+        ship = self.db.query([self.id])[0]
+        fixes = {} # changes to revert
+        if ship['current_status'] == "LIMITED MOVEMENT":
+            fixes.update({'current_status':'UNDERWAY'})
+        if ship['lat'] == 24.2489:
+            fixes.update({'lat': 24.18})
+        if ship['lon'] == -82.0407:
+            fixes.update({'lon': -82.88})
+        if ship['geom'] == { 'coordinates': [-82.0407, 24.2489], 'type': 'Point' }:
+            fixes.update({'geom':{
+                'coordinates': [-82.88, 24.18],
+                'type': 'Point'
+            }})
+        if len(fixes) > 0: # Entities were changes and fixes need to be applied
+            self.db.modify(self.id,fixes)
+            self.db.commit()
+        self.db.close()
+
+        del self.db
+        del self.result
+        del self.id
+        del self.entity
+        del self.non_existent_entity
+        del self.non_existent_id
+        del self.change
+        del self.changes
+        del self.changes_invalid_attr
+        del self.changes_invalid_type
+
+    # modify one value
+    def test_modify(self):
+        self.db.modify(self.id,self.change)
+        self.db.commit()
+        result = self.db.query([self.id])[0]
+        assert result['current_status'] == "LIMITED MOVEMENT"
+
+    # modify many values
+    def test_modify_many_attr(self):
+        self.db.modify(self.id,self.changes)
+        self.db.commit()
+        result = self.db.query([self.id])[0]
+        assert result['lat'] == 24.2489
+        assert result['lon'] == -82.0407
+        assert result['geom'] == {
+            'coordinates': [-82.0407, 24.2489],
+            'type': 'Point'
+        }
+
+    # Modify on empty entity
+    def test_modify_empty_entity(self):
+        with pytest.raises(AttributeError):
+            self.db.modify({},self.change)
+
+    # Modify on entity with no data
+    def test_modify_empty_data(self):
+        with pytest.raises(AttributeError):
+            self.db.modify(self.entity,{})
+
+    # modify on non-existent value
+    def test_modify_non_existent(self):
+        self.db.modify(self.non_existent_id, self.change)
+        result = self.db.query([self.non_existent_id])
+        assert len(result) == 0, "No new entry should spawn despite modify() technically went through"
+
+    # modify changing invalid attr
+    def test_modify_invalid_attr(self):
+        with pytest.raises(UndefinedColumn):
+            self.db.modify(self.id,self.changes_invalid_attr)
+
+    # modify adding attr with invalid datatype
+    def test_modify_invalid_type(self):
+        with pytest.raises(TypeError):
+            self.db.modify(self.id,self.changes_invalid_type)
 
 @pytest.mark.within
 class TestWithin():
@@ -583,67 +1081,93 @@ class TestWithin():
 
 if __name__ == "__main__":
     entity = {
-        'callsign': 'WDN2333',
-        'cargo_weight': 65.0,
-        'current_status': '0',
-        'dist_from_port': 0.0,
-        'dist_from_shore': 0.0,
-        'draft': 2.8,
+        'callsign': 'WLSY',
+        'cargo_weight': 80,
+        'cog': None,
+        'current_status': 'UNDERWAY',
+        'dist_from_port': 0,
+        'dist_from_shore': 0,
+        'draft': 11.2,
         'flag': 'USA',
-        'geom': 'Point(-91.0 30.15)',
-        'heading': 356.3,
-        'lat': 30.15,
-        'length': 137.0,
-        'lon': -91.0,
-        'mmsi': 368261120,
-        'speed': 7.6,
+        'geom': {'coordinates': [-82.88, 24.18], 'type': 'Point'},
+        'heading': 88.8,
+        'lat': 24.18,
+        'length': 186,
+        'lon': -82.88,
+        'mmsi': 367633000,
+        'predicted_path': None,
+        'speed': 11.7,
         'src': 'MarineCadastre-AIS',
-        'timestamp': '2024-09-30T00:00:01',
-        'type': 'PASSENGER',
-        'vessel_name': 'VIKING MISSISSIPPI',
-        'width': 23.0
+        'timestamp': '2024-09-30T00:00:00',
+        'type': 'TANKER',
+        'vessel_name': 'LONESTAR STATE',
+        'width': 32
     }
 
-    operator= DBOperator(table='vessel_archive')
+    ### PR:
+    target = "DON ALFREDO,VELIKA,AVENIR ACCOLADE,SANTA MARIA,SUMMER WIND,CAYO LARGO,KAREN C,OCEAN TOWER,DOROTHY MORAN,BETH M MCALLISTER,DB AVALON".split(',')
 
-    pprint(operator.proximity('Point(-91.02 30.13)', 1000))
-    print(len(operator.get_table()))
-    operator.close()
+    pr_geom = {
+        'type': "Polygon",
+        'coordinates': [[
+            [ "-67.5406", "19.0351" ],
+            [ "-64.9088", "18.9670" ],
+            [ "-64.8577", "17.4425" ],
+            [ "-67.5700", "17.5261" ]
+        ]]
+    }
+
+    VesselOp= DBOperator(table='vessels')
+
+    result = VesselOp.within(pr_geom)
+    ships = VesselOp.query([{'vessel_name':name} for name in target])
+    VesselOp.close()
+    print("Expected vessels:")
+    print(len(target))
+
+    pprint("Vessels retrieved:")
+    print(len(result))
+    input()
+
+    """
+    point [lon, lat]
+    DOROTHY MORAN ('geom': '{"type":"Point","coordinates":[-66.09,18.44]}')
+    BETH M MCALLISTER ('geom': '{"type":"Point","coordinates":[-66.09,18.45]}')
+    """
+    ZoneOp = DBOperator(table='zones')
+    pprint([i['id'] for i in ZoneOp.overlaps(pr_geom)])
+
+    for ship in ships:
+        print(ship['vessel_name'])
+        pprint(ship['geom'])
+        print(f"Lon: {ship['lon']}")
+        print(f"Lat: {ship['lat']}")
+        input()
+        pprint([i['id'] for i in ZoneOp.contains(ship['geom'])])
+
+    ZoneOp.close()
 
 
 
-    # operator = DBOperator(table='zones')
-    # operator = DBOperator(table='vessels',host='localhost',port='5432')
-    # input()
 
-    ### Get filterable items
-    # pprint(operator.fetch_filter_options())
-    # input()
 
-    ### Filters
-    # filters = [{'type' : 'FISHING','current_status': "anchored"}] # querying multple values for one attribute
-    # pprint(operator.query(filters))
-    # pprint(len(operator.query(filters)))
-    # input()
 
-    ### Add
-    # operator.add(entity)
-    # operator.commit()
 
-    ### Query
-    # pprint(operator.query([{"mmsi": 368261120}])) # Table should have new entity
-    # pprint(len(operator.query([{"id":'ANZ650'}]))) # Table should have new entity
-    
-    ### Modify
-    # operator.modify(("mmsi",368261120),{'speed':0.0})
-    # operator.commit()
-    # print("Changed entry:")
-    # pprint(operator.query(("mmsi",368261120)))
-    # input()
 
-    ### Delete
-    # operator.delete(("mmsi",368261120))
-    # operator.commit()
-    # pprint(operator.query(("mmsi",368261120)))
 
-    # operator.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
