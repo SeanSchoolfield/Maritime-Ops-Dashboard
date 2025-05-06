@@ -1,88 +1,86 @@
-import os
-import csv
-import sys
 import requests
+import csv
 from pprint import pprint
-from json import loads, dumps
+from json import dumps
+from time import sleep
 from ...DBOperator import DBOperator
 
-sources = DBOperator(db="capstone",table="sources")
-coop_stations_url = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json"
-failures = []
-dubs = 0
+COOP_STATIONS_URL = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json"
+ALL_PRODUCTS = (
+    "air_temperature wind water_temperature air_pressure humidity conductivity "
+    "visibility salinity water_level hourly_height high_low daily_mean monthly_mean "
+    "one_minute_water_level predictions air_gap currents currents_predictions ofs_water_level"
+).split()
 
-r = requests.get(coop_stations_url)
-print(f"STATUS: {r.status_code}")
-data = r.json()
+def _fetch_available_datums(station_id: str, http_get=requests.get) -> list[str]:
+    available = []
+    for product in ALL_PRODUCTS:
+        url = (
+            f"https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?"
+            f"date=latest&station={station_id}&product={product}&datum=STND&"
+            f"time_zone=gmt&units=english&format=json"
+        )
+        resp = http_get(url)
+        if resp.status_code == 200:
+            j = resp.json()
+            if "error" not in j:
+                available.append(product)
+    return available
 
-# pprint(data.keys())
-# Metadata
-count = data['count']
-units = data['units']
+def run(
+    DBOperatorClass=DBOperator,
+    http_get=requests.get,
+    sleep_fn: callable = sleep,
+) -> tuple[list[dict], list[dict]]:
+    """
+    Fetch all NOAA-COOP stations, probe their available datums, build station entities,
+    insert into Postgres via DBOperator, and return (inserted, failures).
+    """
+    sources_db = DBOperatorClass(table="sources")
+    inserted = []
+    failures = []
 
-# for station in data['stations']:
-#     pprint(station['name'])
+    resp = http_get(COOP_STATIONS_URL)
+    if resp.status_code != 200:
+        sources_db.close()
+        raise RuntimeError(f"Failed to fetch stations: HTTP {resp.status_code}")
+    stations = resp.json().get("stations", [])
 
-station = data['stations']
-for station in data['stations']:
-    # build apis array because I'm way too lazy
-    products = []
-    for product in "air_temperature wind water_temperature air_pressure humidity conductivity visibility salinity water_level hourly_height high_low daily_mean monthly_mean one_minute_water_level predictions air_gap currents currents_predictions ofs_water_level".split():
-        url = f"https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?date=latest&station={station['id']}&product={product}&datum=STND&time_zone=gmt&units=english&format=json"
-        res = requests.get(url)
-        # if we get valid data from product query (and it's not an error message), record it as valid station datum
-        if (res.status_code == 200) and ('error' not in res.json().keys()):
-            products.append(product)
+    for st in stations:
+        sid = st["id"]
+        products = _fetch_available_datums(sid, http_get)
 
-    # Parsing CO-OP station data of last entry
-    # print(f"Name: {station['name']}")
-    # print(f"ID: {station['id']}")
-    # print(f"State: {station['state']}")
-    # print(f"\"shefcode\": {station['shefcode']}")
-    # print(f"\"portscode\": {station['portscode']}")
-    # print(f"Type: NOAA-{station['affiliations']}")
-    # print(f"Timezone: {station['timezone']} (GMT {station['timezonecorr']})")
-    # print(f"Lat,Lon: {station['lat']},{station['lng']}")
-    # print(f"Disclaimers: {station['disclaimers']['self']}")
-    # print(f"Notices: {station['notices']['self']}")
-    # print(f"Datums: {station['datums']['self']}")
-    # print(f"Forecast: {station['forecast']}")
-    # print()
+        entity = {
+            "id":        sid,
+            "name":      st.get("name"),
+            "region":    st.get("state", "USA"),
+            "type":      "NOAA-COOP",
+            "datums":    products,
+            "timezone":  f"{st.get('timezone')} (GMT {st.get('timezonecorr')})",
+            "geom":      f"Point({st.get('lng')} {st.get('lat')})",
+        }
 
-    # Build station entity
-    entity = {
-        "id": station['id'],
-        "name": station['name'],
-        "region": "USA",
-        "type": f"NOAA-COOP", # Cannot be "API"
-        "datums": products, # Check if URI returns 200 or not
-        # Following CANNOT BE NULL
-        "timezone": f"{station['timezone']} (GMT {station['timezonecorr']})",
-        "geom": f"Point({station['lng']} {station['lat']})",
-    }
+        try:
+            sources_db.add(entity.copy())
+            sources_db.commit()
+            inserted.append(entity)
+        except Exception as e:
+            pprint(f"Error inserting station {sid}: {e}")
+            sources_db.rollback()
+            failures.append(entity)
 
-    try:
-        print(f"Adding entity to db...")
-        sources.add(entity.copy())
-        sources.commit()
-        dubs += 1
-    except Exception as e:
-        print(f"An error occured adding vessel to DB...\n{e}")
-        print("This entity caused the failure:")
-        pprint(entity)
-        input()
+        sleep_fn(0.1)
 
-        failures.append(entity)
+    sources_db.close()
+    return inserted, failures
 
-print(f"{dubs} total pushes to DB.")
-print(f"{len(failures)} total sources weren't added to DB for some reason.")
 
-if len(failures) > 0:
-    # TODO: DUNNO IF THE FOLLOWING ACCURATELY SAVES DATA
-    with open('coop-failures.csv','w',newline='') as outFile:
-        writer = csv.DictWriter(outFile, delimiter=',', fieldnames=failures[0].keys())
-        writer.writeheader()
-        for goob in failures:
-            writer.writerow(goob)
-
-sources.close()
+if __name__ == "__main__":
+    ins, fails = run()
+    print(f"Inserted {len(ins)} stations")
+    if fails:
+        with open("coop-station-failures.csv", "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=fails[0].keys())
+            w.writeheader()
+            w.writerows(fails)
+        print(f"Wrote {len(fails)} failures to coop-station-failures.csv")

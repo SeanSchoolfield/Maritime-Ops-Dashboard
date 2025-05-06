@@ -1,4 +1,4 @@
-from ...DBOperator import DBOperator
+from backend.DBOperator import DBOperator
 
 operator = DBOperator(table='vessels')
 

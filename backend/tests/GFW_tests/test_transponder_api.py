@@ -4,7 +4,6 @@ from backend.processors.gfw import transponder_api
 @patch("backend.processors.gfw.transponder_api.KafkaProducer")
 @patch("backend.processors.gfw.transponder_api.requests.post")
 def test_transponder_api_success(mock_post, mock_kafka_producer):
-    # Mock API response
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -18,15 +17,12 @@ def test_transponder_api_success(mock_post, mock_kafka_producer):
     }
     mock_post.return_value = mock_response
 
-    # Mock Kafka producer
     mock_producer = MagicMock()
     mock_kafka_producer.return_value = mock_producer
 
-    # Run the function
     with patch.dict("os.environ", {"TOKEN": "fake-token"}):
         transponder_api.process_transponder_events()
 
-    # Assertions
     mock_post.assert_called_once()
     mock_producer.send.assert_called_once()
     mock_producer.flush.assert_called_once()

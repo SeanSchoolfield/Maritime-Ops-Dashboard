@@ -11,7 +11,6 @@ def build_expected_url(mmsi):
 @patch("backend.processors.gfw.updater_api.requests.get")
 @patch("backend.processors.gfw.updater_api.DBOperator")
 def test_run_update(mock_db_operator_class, mock_requests_get):
-    # --- Setup mock database operator ---
     mock_db = MagicMock()
     mock_db.query.return_value = [
         {"mmsi": "123456789"},
@@ -20,18 +19,15 @@ def test_run_update(mock_db_operator_class, mock_requests_get):
     mock_db_operator_class.return_value = mock_db
     updater_api.operator = mock_db
 
-    # --- Setup mock API response ---
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"entries": [{"name": "Mock Vessel"}]}
     mock_requests_get.return_value = mock_response
 
-    # --- Patch environment variable and headers ---
     with patch.dict("os.environ", {"TOKEN": "fake-token"}):
         updater_api.headers = {"Authorization": "Bearer fake-token"}
         updater_api.run_update()
 
-    # --- Check that requests.get was called with expected URLs ---
     expected_urls = [
         build_expected_url("123456789"),
         build_expected_url("987654321"),
@@ -45,7 +41,6 @@ def test_run_update(mock_db_operator_class, mock_requests_get):
         assert args[0] == expected_url
         assert kwargs["headers"] == {"Authorization": "Bearer fake-token"}
 
-    # --- Ensure database query was called ---
     mock_db.query.assert_called_once()
 
 @patch("backend.processors.gfw.updater_api.requests.get")
@@ -71,7 +66,6 @@ def test_run_update_with_failed_api_response(mock_db_operator_class, mock_reques
     mock_db_operator_class.return_value = mock_db
     updater_api.operator = mock_db
 
-    # Simulate failed response
     mock_response = MagicMock()
     mock_response.status_code = 500
     mock_response.json.return_value = {"error": "Internal Server Error"}
@@ -87,7 +81,7 @@ def test_run_update_with_failed_api_response(mock_db_operator_class, mock_reques
 @patch("backend.processors.gfw.updater_api.DBOperator")
 def test_run_update_with_missing_mmsi(mock_db_operator_class, mock_requests_get):
     mock_db = MagicMock()
-    mock_db.query.return_value = [{"name": "Unnamed Vessel"}]  # Missing 'mmsi'
+    mock_db.query.return_value = [{"name": "Unnamed Vessel"}]
     mock_db_operator_class.return_value = mock_db
     updater_api.operator = mock_db
 
@@ -105,9 +99,9 @@ def test_run_update_with_missing_token(mock_db_operator_class, mock_requests_get
     mock_db_operator_class.return_value = mock_db
     updater_api.operator = mock_db
 
-    with patch.dict("os.environ", {}, clear=True):  # Clear all env vars
+    with patch.dict("os.environ", {}, clear=True):
         with patch("sys.exit") as mock_exit:
             updater_api.GFW_TOKEN = None
-            updater_api.headers = {}  # Prevent real header use
+            updater_api.headers = {}
             updater_api.run_update()
             mock_exit.assert_called_once()

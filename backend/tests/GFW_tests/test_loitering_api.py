@@ -32,7 +32,6 @@ def test_loitering_api_process(mock_requests_post, mock_kafka_producer):
         loitering_api.producer = mock_producer
         loitering_api.process_loitering_events()
 
-    # Assertions
     mock_requests_post.assert_called_once()
     mock_producer.send.assert_called_once()
     mock_producer.flush.assert_called_once()
