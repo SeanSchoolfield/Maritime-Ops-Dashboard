@@ -9,8 +9,8 @@ if os.getenv("ENV") != "test":
         value_serializer=lambda v: json.dumps(v).encode('utf-8')
     )
 
-def send_message(key, message):
-    producer.send('maritime-events', key=key, value=message)
+def send_message(topic, key, message):
+    producer.send(topic, key=key, value=message)
     producer.flush()
 
 '''if __name__ == "__main__":
